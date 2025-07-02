@@ -254,8 +254,7 @@ if "🤖 Generated with" in command:
 
 このスクリプトをフックから呼び出すには、`settings.json`を以下のように設定します。スクリプトのパスは、環境に応じた絶対パスを指定してください。
 
-```json
-// settings.json の例
+```json:settings.jsonの例
 "command": "python /path/to/your/script.py"
 ```
 
