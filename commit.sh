@@ -1,46 +1,40 @@
-#!/bin/bash
-# コミット支援スクリプト
-
 set -e  # エラー時に停止
 
-echo "=== Git Status ==="
+# コミットメッセージの共通部分
+COMMIT_MSG_SUFFIX="日本語1行コミットメッセージ(AI署名なし)だけを出力してください。"
+
 git status
-
-echo -e "\n=== Changes ==="
-# 変更状態をチェック
-has_staged=$(! git diff --cached --quiet && echo "yes" || echo "no")
-has_unstaged=$(! git diff --quiet && echo "yes" || echo "no")
-
-if [ "$has_staged" = "no" ] && [ "$has_unstaged" = "no" ]; then
-    echo "コミットする変更がありません"
-    exit 1
-fi
-
-if [ "$has_staged" = "yes" ]; then
-    echo "変更内容を確認中... (staging)"
-    msg=$(claude -p "stagingされているファイルだけを対象とします。git diff --cached を確認して、日本語1行コミットメッセージ(AI署名なし)だけを出力してください。")
-    commit_options=""
+if [ -n "$(git diff --cached --name-only)" ]; then
+    echo "ステージングされている変更を確認中..."
+    CLAUDE_MSG="git diff --cached を確認して、ステージングされたファイルに対する"
+    ADD_OPTION=""
+    COMMIT_OPTION=""
+elif [ -n "$(git diff --name-only)" ]; then
+    echo "未ステージングの変更を確認中..."
+    CLAUDE_MSG="git diff を確認して、"
+    ADD_OPTION=""
+    COMMIT_OPTION="-a"
+elif [ -n "$(git ls-files --others --exclude-standard)" ]; then
+    echo "未追跡ファイルを確認中..."
+    CLAUDE_MSG="git status を確認して、未追跡ファイルに対する"
+    ADD_OPTION="."
+    COMMIT_OPTION=""
 else
-    echo "変更内容を確認中..."
-    msg=$(claude -p "git diff を確認して、日本語1行コミットメッセージ(AI署名なし)だけを出力してください。")
-    commit_options="-a"
+    echo "コミットする変更がありません。"
+    exit 0
 fi
 
-if [ -z "$msg" ]; then
-    echo "エラー: コミットメッセージが生成されませんでした"
-    exit 1
-fi
+msg=$(claude -p "${CLAUDE_MSG}${COMMIT_MSG_SUFFIX}")
 
-echo -e "\n提案されたコミットメッセージ:"
-echo "「$msg」"
-
-echo -e "\nこれでcommitしますか? (y/N)"
-read -r response
-
-if [[ "$response" =~ ^[Yy]$ ]]; then
-    git commit $commit_options -m "$msg"
-    echo "コミットが完了しました"
-else
+echo -e "\nコミットメッセージを編集してください (Enterで確定、Ctrl+Cで中止):"
+read -r -e -p "> " -i "$msg" edited_msg
+if [ -z "$edited_msg" ]; then
     echo "コミットをキャンセルしました"
     exit 1
 fi
+
+if [ -n "$ADD_OPTION" ]; then
+    git add $ADD_OPTION
+fi
+git commit $COMMIT_OPTION -m "$edited_msg"
+echo "コミットが完了しました"
