@@ -13,4 +13,4 @@ commit:
 
 push: commit
 	git log -n 1
-	@bash confirm.sh "このままpushしますか?" && git push
+	@bash confirm.sh "pushしますか?" && git push
