@@ -230,7 +230,7 @@ https://github.com/7shi/llm-labo/tree/main/structured-output/log
 (ここに本文)
 ```
 ```json:スキーマ
-schema = {
+{
     "type": "object",
     "properties": {
         "q1": {
