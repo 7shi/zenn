@@ -9,10 +9,8 @@ new:
 	@echo "use: npx zenn new:article --slug xxx"
 
 commit:
-	git status
-	@msg=`claude -p "git diff を確認して、日本語1行コミットメッセージ(AI署名なし)だけを出力してください。"`; echo $$msg; echo "これでcommitしますか?"; read dummy; git add .; git commit -m "$$msg"
+	@bash commit.sh
 
 push: commit
 	git log -n 1
-	@echo "このままpushしますか？"; read dummy
-	git push
+	@bash confirm.sh "このままpushしますか?" && git push
