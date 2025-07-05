@@ -25,6 +25,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 `CLAUDE.md` などで署名を付けないように指示しても、守られないことが多いです。この署名を含むコミットを自動的に拒否するために、Claude Code Hooks を利用する方法を説明します。
 
 :::message alert
+【追記 2025/7/5】
+
 [コメント](https://zenn.dev/link/comments/841382ea128b75)で、設定によって回避できることを教えていただきました。
 
 > `settings.json` 内で `"includeCoAuthoredBy": false` とする事で署名機能をOFFに出来ます。  
