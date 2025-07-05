@@ -223,8 +223,8 @@ https://github.com/7shi/llm-labo/tree/main/structured-output/log
 - q3: 具体例の適切性を評価してください（低い=1, 高い=5）
 
 ### 指示
-- 各評価基準について、1〜5点のスコアと、そのスコアに至った理由（reasoning）を提示してください。
-- 最後に、評価全体を要約する総合的な理由（overall_reasoning）も提供してください。
+- 各評価基準について、スコア算出について検討（reasoning）して、1〜5点のスコア（score）を付けてください。
+- 評価全体に対する総合的な理由（overall_reasoning）も提示してください。
 
 ### 評価対象の文章
 (ここに本文)
