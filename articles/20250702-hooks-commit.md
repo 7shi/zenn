@@ -24,6 +24,15 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 `CLAUDE.md` などで署名を付けないように指示しても、守られないことが多いです。この署名を含むコミットを自動的に拒否するために、Claude Code Hooks を利用する方法を説明します。
 
+:::message alert
+[コメント](https://zenn.dev/link/comments/841382ea128b75)で、設定によって回避できることを教えていただきました。
+
+> `settings.json` 内で `"includeCoAuthoredBy": false` とする事で署名機能をOFFに出来ます。  
+> 参考: https://docs.anthropic.com/ja/docs/claude-code/settings
+
+署名を禁止する目的でフックを使う意味はなくなりましたが、フックの使い方を学ぶためにこの記事はそのまま残します。
+:::
+
 ## Claude Code Hooksとは
 
 Claude Code Hooks（フック）とは、Claude Codeの実行ライフサイクルにおける特定のタイミングでコマンドを呼び出す機能です。このフック機能を利用することで、Claude Codeの標準的な動作をカスタマイズできます。
