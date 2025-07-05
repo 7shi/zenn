@@ -50,7 +50,7 @@ JSON内に以下の設定を追加します。
 
 以下のコメントでご教示いただきました。
 
-https://zenn.dev/link/comments/841382ea128b75
+- https://zenn.dev/link/comments/841382ea128b75
 
 ## 関連記事
 

@@ -124,7 +124,7 @@ echo "コミットが完了しました"
 
 コミットメッセージにAI署名が入らないように設定します。
 
-https://zenn.dev/7shi/articles/20250705-co-authored.md
+https://zenn.dev/7shi/articles/20250705-co-authored
 
 フック機能でコミットメッセージにAI署名が入らないように監視します。（設定で回避可能なためフック機能を使う必要はありませんが、この手法自体は他の設定にも応用可能です）
 
