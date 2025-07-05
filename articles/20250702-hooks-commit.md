@@ -35,6 +35,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 署名を禁止する目的でフックを使う意味はなくなりましたが、フックの使い方を学ぶためにこの記事はそのまま残します。
 :::
 
+https://zenn.dev/7shi/articles/20250705-co-authored.md
+
 ## Claude Code Hooksとは
 
 Claude Code Hooks（フック）とは、Claude Codeの実行ライフサイクルにおける特定のタイミングでコマンドを呼び出す機能です。このフック機能を利用することで、Claude Codeの標準的な動作をカスタマイズできます。
