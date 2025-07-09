@@ -6,7 +6,7 @@ topics: ["mcp", "claudecode", "geminicli"]
 published: true
 ---
 
-MCP ではツールが `outputSchema` を定義している場合、レスポンスは `structuredContent` フィールドを使用して返す必要があります。しかし現状のクライアントではその値を見ないことがあるため、注意が必要です。
+MCP ではツールが `outputSchema` を定義している場合、レスポンスは `structuredContent` フィールドを使用して返す必要があります。しかし現状のクライアントではその値を見ないようなので、注意が必要です。
 
 :::message
 本記事は Claude Code の生成結果をベースに編集しました。
