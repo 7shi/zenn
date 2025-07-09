@@ -124,7 +124,7 @@ stdio サーバーのため、`node` で実行して JSON を入力すれば動�
 
 ### Claude Code での動作確認
 
-カレントディレクトリに設定ファイル (`.mcp.json`) を置けば、そのディレクトリで起動した Claude Code で MCP サーバーが実行できます。
+カレントディレクトリに設定ファイル (`.mcp.json`) を置けば、そのディレクトリで Claude Code を起動して MCP サーバーが実行できます。
 
 ```json:.mcp.json
 {
@@ -133,9 +133,8 @@ stdio サーバーのため、`node` で実行して JSON を入力すれば動�
       "type": "stdio",
       "command": "node",
       "args": [
-        "/home/7shi/llm/mcp-caesar/test/index.js"
-      ],
-      "env": {}
+        "/path/to/index.js"
+      ]
     }
   }
 }
