@@ -25,7 +25,7 @@ Gemini CLI でテスト用の MCP サーバーを作成しました。元ファ�
 ```javascript:index.js
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { CallToolRequestSchema, ListToolsRequestSchema, } from '@modelcontextprotocol/sdk/types.js';
+import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
 const testServerToolDefinition = {
     name: 'test_call',
@@ -122,6 +122,17 @@ stdio サーバーのため、`node` で実行して JSON を入力すれば動�
 
 最初に `tools/list` でツールの一覧を取得し、次に `tools/call` で `test_call` ツールを実行して `abc` という結果を得ています。
 
+`tools/list` を処理するハンドラが `ListToolsRequestSchema`、`tools/call` を処理するハンドラが `CallToolRequestSchema` として登録されています。
+
+```javascript:ハンドラ登録箇所
+    server.setRequestHandler(ListToolsRequestSchema, async (request, extra) => ...);
+    server.setRequestHandler(CallToolRequestSchema, async (request, extra) => ...);
+```
+
+:::message
+この部分は決まり文句のようですが、実際の動作との対応関係を意識しておくと見通しが良くなります。
+:::
+
 ### Claude Code での動作確認
 
 カレントディレクトリに設定ファイル (`.mcp.json`) を置けば、そのディレクトリで Claude Code を起動して MCP サーバーが実行できます。
@@ -197,7 +208,7 @@ Gemini CLI ではエラーは発生しなくなりますが、やはり結果が
 
 これは、MCP の仕様通りでエラーはなく、ツールの実行自体は成功しているものの、`structuredContent` の中身を認識・表示できないことを示しています。
 
-`content` と `structuredContent` の両方が定義されていれば、`content` が結果として認識されます。
+`content` と `structuredContent` の両方が定義されていれば、`content`（この例では `abc`）が結果として認識されます。
 
 ```javascript:両方を定義
             return {
@@ -211,7 +222,7 @@ Gemini CLI ではエラーは発生しなくなりますが、やはり結果が
                     content: [
                         {
                             type: 'text',
-                            text: 'abc'
+                            text: 'def'
                         }
                     ]
                 }
