@@ -2,7 +2,7 @@
 title: "PDF 埋め込みフォントの独自エンコーディング調査"
 emoji: "🔠"
 type: "tech" # tech: 技術記事 / idea: アイデア
-topics: ["python", "pdf", "font", "freetype", "pillow"]
+topics: ["python", "pdf", "font", "pymupdf", "freetype"]
 published: true
 ---
 
