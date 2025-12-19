@@ -164,12 +164,13 @@ Sixel によってターミナル内でグリフの形状が確認できるよ�
 ```python
 import base64
 import io
+from PIL import ImageChops
 
 def to_data_url(image):
-    buf = io.BytesIO()
-    image.save(buf, format="PNG")
-    b64 = base64.b64encode(buf.getvalue()).decode()
-    return f"data:image/png;base64,{b64}"
+    with io.BytesIO() as buf:
+        image.save(buf, format="PNG")
+        b64 = base64.b64encode(buf.getvalue()).decode()
+        return f"data:image/png;base64,{b64}"
 
 # HTML の初期化
 html = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n</head>\n<body>\n'
@@ -184,8 +185,11 @@ for i, (code, gid) in enumerate(face.get_chars(), start=1):
     show_sixel(image)
     print()
 
+    # 白黒を反転
+    inverted = ImageChops.invert(image)
+
     # HTML に追加
-    data_url = to_data_url(image)
+    data_url = to_data_url(inverted)
     html += f'<p>{glyph_info} <img src="{data_url}"></p>\n'
 
 html += '</body>\n</html>\n'
