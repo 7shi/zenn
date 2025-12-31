@@ -402,7 +402,7 @@ Ollama が構造化出力をどのように実現しているかを調査しま�
 
 https://zenn.dev/7shi/articles/fa36989a04c9ed
 
-MCP はツールコールをより組織的に整理したものと言えますが、比較した記事です。（Function calling はツールコールの別名で、同じものを指す）
+MCP はツールコールをより組織的に整理したものと言えますが、比較した記事です。（Function calling はツールコールの別名で同じもの）
 
 https://qiita.com/7shi/items/e27866ce51c6b9a0f605
 
