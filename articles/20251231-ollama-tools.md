@@ -402,16 +402,16 @@ Ollama が構造化出力をどのように実現しているかを調査しま�
 
 https://zenn.dev/7shi/articles/fa36989a04c9ed
 
-MCP はツールコールをより組織的に整理したものと言えますが、比較した記事です。（Function calling はツールコールと同じもの）
+MCP はツールコールをより組織的に整理したものと言えますが、比較した記事です。（Function calling はツールコールの別名で、同じものを指す）
 
 https://qiita.com/7shi/items/e27866ce51c6b9a0f605
 
 ## 参考
 
-構造化出力でツールコールを模倣しましたが、その逆のパターン（ツールコールで構造化出力を模倣）もあります。
+構造化出力でツールコールを模倣しましたが、その逆パターン（ツールコールで構造化出力を模倣）もあります。
 
 - https://github.com/anthropics/claude-cookbooks/blob/main/tool_use/extracting_structured_json.ipynb
 
-MCP は仕様コンテキスト量の肥大化が問題になることがあり、コード生成の方が効率的なケースもあるようです。
+MCP はコンテキスト消費量の肥大化が問題になることがあり、コード生成の方が効率的なケースもあるようです。
 
 https://x.com/iwashi86/status/1992450542870659395
