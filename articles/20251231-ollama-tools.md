@@ -412,6 +412,6 @@ https://qiita.com/7shi/items/e27866ce51c6b9a0f605
 
 - https://github.com/anthropics/claude-cookbooks/blob/main/tool_use/extracting_structured_json.ipynb
 
-MCP はコンテキストの肥大が問題になることがあり、コード生成の方が効率的なケースもあるようです。
+MCP は仕様コンテキスト量の肥大化が問題になることがあり、コード生成の方が効率的なケースもあるようです。
 
 https://x.com/iwashi86/status/1992450542870659395
