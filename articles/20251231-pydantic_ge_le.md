@@ -70,8 +70,8 @@ print(json.dumps(Score.model_json_schema(), indent=2))
 
 このように、`ge=0, le=20` と指定すればと、JSONスキーマには自動的に `"minimum": 0` と `"maximum": 20` が設定されます。
 
-- `ge=0` => `score >= 0` (0 以上)
-- `le=20` => `score <= 20` (20 以下)
+- `ge=0`: `score >= 0` (0 以上)
+- `le=20`: `score <= 20` (20 以下)
 
 ### バリデーション動作の検証
 
