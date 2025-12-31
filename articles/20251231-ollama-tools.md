@@ -20,7 +20,7 @@ Ollama は、大規模言語モデル (LLM) から外部のツールや関数を
 from ollama import chat
 
 MODEL = "qwen3:4b"
-PROMPT = "リンゴが3個、みかんが5個あります。くだものは全部で何個ですか？"
+PROMPT = "りんごが3個、みかんが5個あります。果物は全部で何個ですか？"
 
 def add_two_numbers(a: int, b: int) -> int:
   """
@@ -55,7 +55,7 @@ for tool_call in response.message.tool_calls or []:
   print("Output:", output)
 ```
 ```text:実行結果
-リンゴが3個、みかんが5個あります。くだものは全部で何個ですか？
+りんごが3個、みかんが5個あります。果物は全部で何個ですか？
 Calling function: add_two_numbers
 Arguments: {'a': 3, 'b': 5}
 Output: 8
@@ -71,7 +71,7 @@ Output: 8
 from ollama import chat
 
 MODEL = "qwen3:4b"
-PROMPT = "リンゴが3個、みかんが5個あります。くだものは全部で何個ですか？"
+PROMPT = "りんごが3個、みかんが5個あります。果物は全部で何個ですか？"
 
 print(PROMPT)
 messages = [{"role": "user", "content": PROMPT}]
@@ -79,8 +79,8 @@ response = chat(MODEL, messages=messages)
 print(response.message.content)
 ```
 ```text:実行結果
-リンゴが3個、みかんが5個あります。くだものは全部で何個ですか？
-リンゴ（3個）とみかん（5個）を合わせると、
+りんごが3個、みかんが5個あります。果物は全部で何個ですか？
+りんご（3個）とみかん（5個）を合わせて計算すると、
 **3 + 5 = 8** 個になります。
 
 答え：**8個**。
@@ -290,7 +290,7 @@ SYSTEM = """
 [{"name": "...", "arguments": {...}}, ...]
 """.strip()
 
-PROMPT = "リンゴが3個、みかんが5個あります。くだものは全部で何個ですか？"
+PROMPT = "りんごが3個、みかんが5個あります。果物は全部で何個ですか？"
 print(PROMPT)
 
 messages = [
@@ -315,7 +315,7 @@ for tool_call in json.loads(content):
   print("Output:", output)
 ```
 ```text:実行結果
-リンゴが3個、みかんが5個あります。くだものは全部で何個ですか？
+りんごが3個、みかんが5個あります。果物は全部で何個ですか？
 Response: [{"name": "add_two_numbers", "arguments": {"a": 3, "b": 5}}]
 Calling function: add_two_numbers
 Arguments: {'a': 3, 'b': 5}
@@ -356,7 +356,7 @@ SYSTEM = """
 - name: add_two_numbers, arguments: {"a": int, "b": int}
 """.strip()
 
-PROMPT = "リンゴが3個、みかんが5個あります。くだものは全部で何個ですか？"
+PROMPT = "りんごが3個、みかんが5個あります。果物は全部で何個ですか？"
 print(PROMPT)
 
 messages = [
@@ -381,7 +381,7 @@ for tool_call in tool_calls:
   print("Output:", output)
 ```
 ```text:実行結果
-リンゴが3個、みかんが5個あります。くだものは全部で何個ですか？
+りんごが3個、みかんが5個あります。果物は全部で何個ですか？
 Response: [{"name": "add_two_numbers", "arguments": {"a": 3, "b": 5}}]
 Calling function: add_two_numbers
 Arguments: {'a': 3, 'b': 5}
