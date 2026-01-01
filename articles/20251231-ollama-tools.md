@@ -332,7 +332,7 @@ Ollama は `format` に Pydantic による型定義を渡すことで、構造�
 
 ```py
 from typing import Any
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel
 from ollama import chat
 
 MODEL = "gemma3:4b"
@@ -346,8 +346,8 @@ class ToolCall(BaseModel):
   name: str
   arguments: dict[str, Any]
 
-class ToolCalls(RootModel[list[ToolCall]]):
-  pass
+class ToolCalls(BaseModel):
+  calls: list[ToolCall]
 
 format = ToolCalls.model_json_schema()
 
@@ -369,8 +369,8 @@ response = chat(MODEL, messages=messages, format=format)
 content = response.message.content.strip()
 print("Response:", content)
 
-tool_calls = ToolCalls.model_validate_json(content).root
-for tool_call in tool_calls:
+tool_calls = ToolCalls.model_validate_json(content)
+for tool_call in tool_calls.calls:
   name = tool_call.name
   args = tool_call.arguments
   print("Calling function:", name)
