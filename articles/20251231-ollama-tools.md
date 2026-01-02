@@ -410,7 +410,7 @@ https://qiita.com/7shi/items/e27866ce51c6b9a0f605
 
 構造化出力でツールコールを模倣しましたが、その逆パターン（ツールコールで構造化出力を模倣）もあります。
 
-- https://github.com/anthropics/claude-cookbooks/blob/main/tool_use/extracting_structured_json.ipynb
+https://zenn.dev/7shi/articles/20260102-toolcall-strout
 
 MCP はコンテキスト消費量の肥大化が問題になることがあり、コード生成の方が効率的なケースもあるようです。
 
