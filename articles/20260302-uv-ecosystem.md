@@ -19,9 +19,9 @@ Python プロジェクトで uv を使い始めるときに最低限必要な知
 :::message
 `pyproject.toml` に関わる主な標準仕様:
 
-- [PEP 517](https://peps.python.org/pep-0517/): ビルドシステムのインターフェース（`build-backend` キー）を定義
-- [PEP 518](https://peps.python.org/pep-0518/): `pyproject.toml` ファイルと `[build-system]` テーブルを導入
-- [PEP 621](https://peps.python.org/pep-0621/): `[project]` テーブル（`[project.scripts]` などのメタデータ）を標準化
+- [PEP 517](https://peps.python.org/pep-0517/): ビルドシステムのインターフェース（`build-backend` キー）
+- [PEP 518](https://peps.python.org/pep-0518/): `[build-system]` テーブル
+- [PEP 621](https://peps.python.org/pep-0621/): `[project]` テーブル（`[project.scripts]` などのメタデータ）
 :::
 
 uv が担うのは仮想環境の管理・依存関係の解決・パッケージのインストールといった基本的なプロジェクト管理機能です。ソースコードから配布物（wheel / sdist）を作成するビルド処理本体は外部のビルドバックエンド（hatchling 等）に委譲され、uv は `uv build` でそのフロントエンドとして振る舞います。hatchling は uv と組み合わせて使われることが多いですが、uv とは独立したツールです。
