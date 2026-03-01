@@ -90,7 +90,9 @@ lint = "ruff check ."
 
 定義したタスクは `uv run task <タスク名>` で呼び出します。`[project.scripts]` に似た定義に見えますが、仕組みは異なります。taskipy は `bin/task` という実行ファイルとしてインストールされるパッケージです。`uv run task test` は `bin/task` を `test` という引数で呼び出しているに過ぎず、uv run から直接実行できるターゲットを生成しているわけではありません。
 
-hatchling と同様に、taskipy も `pyproject.toml` を独立して参照するツールです。uv / hatchling / taskipy はそれぞれ別々に `pyproject.toml` を読み込んで自分の担当セクションを処理しており、uv のプラグインとして動作しているわけではありません。
+:::message
+hatchling / taskipy はそれぞれ uv とは別々に `pyproject.toml` を読み込んで自分の担当セクションを処理しており、uv のプラグインとして動作しているわけではありません。
+:::
 
 ## ディレクトリ構成の使い分け
 
