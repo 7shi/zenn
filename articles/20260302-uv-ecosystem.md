@@ -63,10 +63,10 @@ build-backend = "hatchling.build"
 
 ```toml:設定例
 [project.scripts]
-example-tool = "example_tool:main"
+example_tool = "example_tool:main"
 ```
 
-左辺がコマンド名、右辺が `モジュール名:関数名` です。Makefile のターゲットのようなタスク定義に見えますが、実際の仕組みは異なります。インストール時に `bin/example-tool`（Windows では `Scripts/example-tool.exe`）という実行ファイル（ラッパー）が生成され、`uv run example-tool` はそのラッパーを呼び出します。ラッパーの内部では `example_tool` モジュールを import して `main()` を実行するコードが書かれています。
+左辺がコマンド名、右辺が `モジュール名:関数名` です。Makefile のターゲットのようなタスク定義に見えますが、実際の仕組みは異なります。インストール時に `bin/example_tool`（Windows では `Scripts/example_tool.exe`）という実行ファイル（ラッパー）が生成され、`uv run example_tool` はそのラッパーを呼び出します。ラッパーの内部では `example_tool` モジュールを import して `main()` を実行するコードが書かれています。
 
 ここで注意が必要なのは、`[project.scripts]` を機能させるには `[build-system]` でビルドバックエンドを指定する必要がある一方で、実行ラッパーを生成するのはビルドバックエンドではないという点です。処理は「ビルド時」と「インストール時」で分かれており、ビルド時には hatchling などのビルドバックエンドが `[project.scripts]` を wheel のメタデータ（entry points）へ書き込みます。一方、インストール時には uv がそのメタデータを読み取り、`bin/`（Windows では `Scripts/`）に実行ラッパーを生成します。ビルドバックエンドがメタデータを作らないと uv もラッパーを生成できませんが、ラッパー本体を生成するのは uv です。
 
