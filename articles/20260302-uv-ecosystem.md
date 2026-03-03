@@ -44,7 +44,7 @@ build-backend = "hatchling.build"
 
 ビルドとインストールは別の工程であり、それぞれ担当が異なります。
 
-- **ビルド**（`uv build`）: `[build-system.requires]` に指定された外部パッケージ（`hatchling`、`setuptools` 等）を取得し、wheel / sdist を作成します。uv はビルドのフロントエンドとして動作し、ビルド処理本体はビルドバックエンドに委譲します。この段階では `site-packages` や `bin` への配置は行いません。
+- **ビルド**（`uv build`）: `[build-system]` テーブルの `requires` キーに指定された外部パッケージ（`hatchling`、`setuptools` 等）を取得し、wheel / sdist を作成します。uv はビルドのフロントエンドとして動作し、ビルド処理本体はビルドバックエンドに委譲します。この段階では `site-packages` や `bin` への配置は行いません。
 - **インストール**（`uv sync` / `uv add`）: uv 自身が wheel の内容を `site-packages` へ展開し、`[project.scripts]` に基づくラッパーを `bin` へ生成します。ビルドバックエンドは関与しません。
 
 ## 3種類の実行方法の違い
