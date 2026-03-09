@@ -71,9 +71,9 @@ def safe_path(p: str) -> Path:
     """
     Ensure the path is within the WORKDIR.
     """
-    # パスを作業ディレクトリ（WORKDIR）からの絶対パスに変換
+    # WORKDIR からの相対パスを絶対パスに変換
     path = (WORKDIR / p).resolve()
-    # 解決されたパスがWORKDIR配下にあるかを確認
+    # 解決されたパスが WORKDIR 配下にあるかを確認
     if not path.is_relative_to(WORKDIR):
         raise ValueError(f"Path escapes workspace: {p}")
     return path
@@ -92,7 +92,7 @@ def read_file(path: str, limit: int = None) -> str:
         # パスの安全性を確認して内容を読み取る
         text = safe_path(path).read_text()
         lines = text.splitlines()
-        # 表示制限（limit）がある場合は切り詰める
+        # 表示制限がある場合は切り詰める
         if limit and limit < len(lines):
             lines = lines[:limit] + [f"... ({len(lines) - limit} more lines)"]
         return "\n".join(lines)[:50000]
@@ -127,10 +127,10 @@ def edit_file(path: str, old_text: str, new_text: str) -> str:
     try:
         fp = safe_path(path)
         content = fp.read_text()
-        # 置換対象の文字列（old_text）がファイル内に存在するか確認
+        # 置換対象の文字列 `old_text` がファイル内に存在するか確認
         if old_text not in content:
             return f"Error: Text not found in {path}"
-        # 最初の1箇所だけを置換して保存
+        # 最初の 1 箇所だけを置換して保存
         fp.write_text(content.replace(old_text, new_text, 1))
         return f"Edited {path}"
     except Exception as e:
