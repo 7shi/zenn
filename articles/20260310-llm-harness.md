@@ -372,7 +372,7 @@ def agent_loop(messages: list):
 4.  メインループで最終的なテキストメッセージをユーザーに表示し、次の入力を待つ
 
 :::message
-このフローでは、ツールコールの後に必ずテキストでの回答で締めくくられるようになっています。
+このフローの構成上、ツールコールの後に必ずテキストの回答で締め括ることになります。
 :::
 
 ## まとめ
@@ -422,5 +422,5 @@ https://zenn.dev/sakasegawa/articles/af8ede2e4d7da4
 https://nyosegawa.github.io/posts/harness-engineering-best-practices-2026/
 
 :::message
-ここで参考にさせていただいたお三方は、レベルの高い記事を書いておられるので要注目です。
+ここで紹介させていただいた [laiso](https://x.com/laiso) さん、[azukiazusa](https://x.com/azukiazusa9) さん、[逆瀬川](https://x.com/gyakuse) さんは、レベルの高い記事を書いておられるので要注目です。
 :::
