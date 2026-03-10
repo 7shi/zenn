@@ -8,9 +8,9 @@ published: true
 
 本記事では、いわゆる「AI コーディングエージェント」の仕組みを解剖します。単なる「チャット」がどのようにして「一連の作業の自動実行」へと変わるのか、その背後にあるメカニズムを探ります。
 
-Ollama を対象とした学習用の実装を使用します。
+学習用の実装を使用します。オリジナルは Anthropic SDK を使用していましたが、Ollama に移植したフォークです。
 
-- [s02_tool_use.py](https://github.com/7shi/learn-ollama-code/blob/feature/migrate-to-ollama/agents/s02_tool_use.py)
+- [s02_tool_use.py](https://github.com/7shi/learn-ollama-code/blob/feature/migrate-to-ollama/agents/s02_tool_use.py)（[ドキュメント](https://github.com/7shi/learn-ollama-code/blob/feature/migrate-to-ollama/docs/ja/s02-tool-use.md)）
 
 :::message
 本記事は Gemini CLI の生成結果をベースに編集しました。
@@ -315,7 +315,7 @@ TOOL_HANDLERS = {
 ```
 
 :::message
-このケースではキーと関数名が一致しているため自動生成が可能です。ただ、関数を指定せずにラムダ式を挟むケースなどがあるため、拡張しやすいようにベタ書きしています。
+分かりやすさを優先してキーと関数名を一致させています。ツールを追加する際、関数を直接指定せずにラムダ式を挟むケースなどがあるため、`TOOLS` から自動生成せずに列挙しています。
 :::
 
 `tool_calls` の中身があればツールを実行してループを継続し、空であれば「最終的なテキスト回答が来た」と判断してループを終了します。
@@ -386,7 +386,7 @@ https://azukiazusa.dev/blog/build-your-own-coding-ai-agent/
 
 https://zenn.dev/sakasegawa/articles/af8ede2e4d7da4
 
-ハーネスの効果的な利用方法が解説されています。特に、実装に至った判断を残しておくのは重要です。裏側の仕組みがイメージできていれば、より効果的に利用できそうです。
+ハーネスの効果的な利用方法が解説されています。特に、実装に至った判断を残しておくのは重要です。ハーネスの仕組みがイメージできていれば、より効果的に利用できそうです。
 
 https://nyosegawa.github.io/posts/harness-engineering-best-practices-2026/
 
