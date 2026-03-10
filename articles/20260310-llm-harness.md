@@ -73,15 +73,14 @@ def bash(command: str) -> str:
 LLM は "Run a shell command." という情報を踏まえて、プロンプトの内容から「このタスクを達成するためにはシェルコマンドを実行する必要がある」と判断した場合に、`bash` ツールを実行するよう依頼します。
 
 ```text:使用例
-s02 >> カレントディレクトリにあるPythonファイルを一覧表示する
-> bash: -rw-r--r-- 1 7shi 7shi 0  3月 10 13:10 greet.py
--rw-r--r-- 1 7shi 7shi 0  3月 10 13:10 hello.py
-カレントディレクトリにある Python ファイルは以下の通りです：
+s02 >> このディレクトリにあるすべてのPythonファイルを一覧表示する
+bash{'command': 'ls -la *.py'}
+-rw-r--r-- 1 7shi 7shi 327  3月 10 13:27 greet.py
+-rw-r--r-- 1 7shi 7shi  23  3月 10 19:18 hello.py
+このディレクトリにあるPythonファイルは以下の通りです：
 
-- `greet.py`
-- `hello.py`
-
-これら 2 つのファイルが現在のディレクトリに存在します。
+- `greet.py` (327 bytes)
+- `hello.py` (23 bytes)
 ```
 
 :::message
@@ -136,14 +135,15 @@ def read_file(path: str, limit: int = None) -> str:
 ```
 ````text:使用例
 s02 >> hello.pyはどのような処理を行っていますか？
-> read_file: print("Hello, World!")
-hello.py は非常にシンプルです。このファイルは、Python 実行時に "Hello, World!" という文字列を出力します。
+read_file{'path': 'hello.py', 'limit': 10}
+print("Hello, World!")
+`hello.py` ファイルには、以下の1行のコードが含まれています。
 
 ```python
 print("Hello, World!")
 ```
 
-これはプログラミング教育や環境構築のテスト用スクリプトとしてよく使われる、最も基本的な Python プログラムです。関数 `print()` を呼び出して標準出力に "Hello, World!" と表示するだけの処理を行っています。
+このプログラムは、コンソールに `"Hello, World!"` という文字列を出力する処理を行っています。
 ````
 
 #### ファイルの作成
@@ -173,21 +173,13 @@ def write_file(path: str, content: str) -> str:
 ```
 ````text:使用例
 s02 >> greet(name)関数を持つgreet.pyというファイルを作成する
-> write_file: Wrote 46 bytes to greet.py
-`greet.py` を作成しました。このファイルは以下の機能を持っています：
+write_file{'path': 'greet.py', 'content': 'def greet(name):\n    return f"Hello, {name}!"\n'}
+Wrote 46 bytes to greet.py
+ファイル「greet.py」を英語で記述して作成しました。内容は以下の通りです：
 
 ```python
 def greet(name):
     return f"Hello, {name}!"
-```
-
-`greet`関数は `name` という引数を受け取り、 "Hello, {name}!" という形式で挨拶文字列を返します。
-
-例：
-```python
->>> from greet import greet
->>> greet("Alice")
-'Hello, Alice!'
 ```
 ````
 
@@ -222,26 +214,22 @@ def edit_file(path: str, old_text: str, new_text: str) -> str:
 ```
 ````text:使用例
 s02 >> greet.pyを編集して関数にdocstringを追加する
-> read_file: def greet(name):
-    return f"Hello, {name}!"
-> edit_file: Edited greet.py
-`greet.py` に docstring を追加しました。
+edit_file{'path': 'greet.py', 'old_text': 'def greet(name):\n    return f"Hello, {name}!"', 'new_text': 'def greet(name):\n    """Greet the given name.\n\n    Args:\n        name (str): The name to greet.\n\n    Returns:\n        str: A greeting message.\n    """\n    return f"Hello, {name}!"'}
+Edited greet.py
+greet.py に docstring を追加しました。編集後のファイルの中身は以下の通りです：
 
 ```python
 def greet(name):
-    """
-    指定した名前に対して挨拶を作成する。
+    """Greet the given name.
 
     Args:
-        name (str): 挨拶する人物の名前
+        name (str): The name to greet.
 
     Returns:
-        str: 挨拶文字列
+        str: A greeting message.
     """
     return f"Hello, {name}!"
 ```
-
-この docstring は、関数の用途、引数の説明、戻り値、使用例などを日本語で記載しています。`help(greet)` を実行すると、このドキュメントを参照できます。
 ````
 
 ## ツールのリスト化と自動変換
@@ -279,7 +267,7 @@ if __name__ == "__main__":
     history = [{"role": "system", "content": SYSTEM}]
     while True:
         try:
-            # ユーザーからの入力を受け付ける
+            # ユーザーからの入力を受け付ける（プロンプトは水色）
             query = input("\033[36ms02 >> \033[0m")
         except (EOFError, KeyboardInterrupt):
             break
@@ -353,14 +341,13 @@ def agent_loop(messages: list):
             
         # 実行：指示されたツールを一つずつ呼び出す
         for tool in response.message.tool_calls:
-            # TOOL_HANDLERS から対応する関数を取得
+            # ツールの名前と引数を表示（黄色）
+            print(f"\033[33m{tool.function.name}{tool.function.arguments}\033[0m")
+            # 関数を取得・実行して、実行結果を表示
             handler = TOOL_HANDLERS.get(tool.function.name)
-            # 関数を実行し結果を取得
             output = handler(**tool.function.arguments) if handler else f"Unknown tool: {tool.function.name}"
-            # 実行中のツール名と出力をコンソールに表示
-            print(f"> {tool.function.name}: {str(output)[:200]}")
-            # 実行結果（ツールのターン）を履歴に追加。
-            # これにより、次のループ（チャット呼び出し）で LLM は結果を確認できる
+            print(str(output)[:200])
+            # 実行結果を履歴に追加、これにより次のループで LLM は結果を確認できる
             messages.append({"role": "tool", "content": str(output), "tool_name": tool.function.name})
 ```
 
