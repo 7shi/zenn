@@ -73,13 +73,13 @@ def bash(command: str) -> str:
 LLM は "Run a shell command." という情報を踏まえて、プロンプトの内容から「このタスクを達成するためにはシェルコマンドを実行する必要がある」と判断した場合に、`bash` ツールを実行するよう依頼します。
 
 ```text:使用例
-s02 >> このディレクトリにあるすべてのPythonファイルを一覧表示する
+s02 >> カレントディレクトリにあるすべてのPythonファイルを一覧表示する
 bash{'command': 'ls -la *.py'}
--rw-r--r-- 1 7shi 7shi 327  3月 10 13:27 greet.py
+-rw-r--r-- 1 7shi 7shi 180  3月 10 20:01 greet.py
 -rw-r--r-- 1 7shi 7shi  23  3月 10 19:18 hello.py
-このディレクトリにあるPythonファイルは以下の通りです：
+カレントディレクトリにあるPythonファイルは以下の通りです：
 
-- `greet.py` (327 bytes)
+- `greet.py` (180 bytes)
 - `hello.py` (23 bytes)
 ```
 
@@ -343,10 +343,10 @@ def agent_loop(messages: list):
         for tool in response.message.tool_calls:
             # ツールの名前と引数を表示（黄色）
             print(f"\033[33m{tool.function.name}{tool.function.arguments}\033[0m")
-            # 関数を取得・実行して、実行結果を表示
+            # 関数を取得・実行して、実行結果を表示（黄色）
             handler = TOOL_HANDLERS.get(tool.function.name)
             output = handler(**tool.function.arguments) if handler else f"Unknown tool: {tool.function.name}"
-            print(str(output)[:200])
+            print(f"\033[33m{str(output)[:200]}\033[0m")
             # 実行結果を履歴に追加、これにより次のループで LLM は結果を確認できる
             messages.append({"role": "tool", "content": str(output), "tool_name": tool.function.name})
 ```
