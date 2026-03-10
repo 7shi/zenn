@@ -403,7 +403,7 @@ https://qiita.com/7shi/items/e27866ce51c6b9a0f605
 
 ## 参考
 
-ここで紹介させていただいた [laiso](https://x.com/laiso) さん、[azukiazusa](https://x.com/azukiazusa9) さん、[逆瀬川](https://x.com/gyakuse)さんは、レベルの高い記事を書いておられるので必見です。
+以下で紹介させていただいた [laiso](https://x.com/laiso) さん、[azukiazusa](https://x.com/azukiazusa9) さん、[逆瀬川](https://x.com/gyakuse)さんは、レベルの高い記事を書いておられるので必見です。
 
 ### laiso さん
 
