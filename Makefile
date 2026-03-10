@@ -1,5 +1,8 @@
 all:
 
+update:
+	npm install zenn-cli@latest
+
 preview:
 	@echo -n open:
 	@ip address | grep "scope global eth0" | awk '{print $2}' | cut -d'/' -f1 | sed 's/$$/:8000/'
