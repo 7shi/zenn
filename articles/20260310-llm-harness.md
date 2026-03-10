@@ -395,6 +395,10 @@ https://github.com/7shi/learn-ollama-code
 
 https://note.com/7shi/n/n9b7839879be0
 
+MCP はツールをユーザー側で追加できるように標準化した仕組みに相当します。MCP とツールコール（Function calling とも呼ばれる）を比較して解説した記事です。
+
+https://qiita.com/7shi/items/e27866ce51c6b9a0f605
+
 ## 参考
 
 各種コーディングエージェントについてのまとめ記事です。
@@ -404,6 +408,10 @@ https://blog.lai.so/agent/
 TypeScript と Gemini を使ってコーディングエージェントを自作する記事です。MCP をサポートしており、ファイルの読み書きも MCP 経由で行います。
 
 https://azukiazusa.dev/blog/build-your-own-coding-ai-agent/
+
+昨今、MCP はコンテキスト効率が悪いと言われることが多くなっていますが、コンテキスト消費量を抑える工夫も行われています。
+
+https://azukiazusa.dev/blog/enable-claude-code-tool-search-to-reduce-mcp-token-usage/
 
 コーディングエージェントの歴史をたどりつつ、サンプル実装も解説されています。
 
