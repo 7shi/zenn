@@ -70,12 +70,18 @@ def bash(command: str) -> str:
         return "Error: Timeout (120s)"
 ```
 
-LLM は "Run a shell command." という情報を踏まえて、プロンプトの内容から「このタスクを達成するためにはシェルコマンドを実行する必要がある」と判断した場合に、`bash` ツールを実行するよう依頼します。
+LLM は "Run a shell command." という情報を踏まえて、プロンプトの内容から「このタスクを達成するためにはシェルコマンドを実行する必要がある」と判断した場合、`bash` ツールを実行するよう依頼を返します。それを受け取ったコード側でツールを実行して結果を渡すことで、最終的な回答が得られます。
+
+:::message
+具体的なフローは、後でコードを引用しながら説明します。
+:::
 
 使用例: `カレントディレクトリにあるすべてのPythonファイルを一覧表示する`
 
-```text:ツールコール
+```text:ツール実行依頼
 bash{'command': 'ls -la *.py'}
+```
+```text:ツール実行結果
 -rw-r--r-- 1 7shi 7shi 180  3月 10 20:01 greet.py
 -rw-r--r-- 1 7shi 7shi  23  3月 10 19:18 hello.py
 ```
@@ -85,10 +91,6 @@ bash{'command': 'ls -la *.py'}
 - `greet.py` (180 bytes)
 - `hello.py` (23 bytes)
 ```
-
-:::message
-詳細なフローは後で説明しますが、ツールの呼び出しはコードで作り込む必要があります。LLM はツールの実行依頼を返して、コード側でツールを実行して結果を渡すことで、最終的な回答を生成します。
-:::
 
 ### ファイル操作ツール
 
@@ -139,8 +141,10 @@ def read_file(path: str, limit: int = None) -> str:
 
 使用例: `hello.pyはどのような処理を行っていますか？`
 
-```text:ツールコール
+```text:ツール実行依頼
 read_file{'path': 'hello.py', 'limit': 10}
+```
+```text:ツール実行結果
 print("Hello, World!")
 ```
 ````text:回答
@@ -181,8 +185,10 @@ def write_file(path: str, content: str) -> str:
 
 使用例: `greet(name)関数を持つgreet.pyというファイルを作成する`
 
-```text:ツールコール
+```text:ツール実行依頼
 write_file{'path': 'greet.py', 'content': 'def greet(name):\n    return f"Hello, {name}!"\n'}
+```
+```text:ツール実行結果
 Wrote 46 bytes to greet.py
 ```
 ````text:回答
@@ -226,8 +232,10 @@ def edit_file(path: str, old_text: str, new_text: str) -> str:
 
 使用例: `greet.pyを編集して関数にdocstringを追加する`
 
-```text:ツールコール
+```text:ツール実行依頼
 edit_file{'path': 'greet.py', 'old_text': 'def greet(name):\n    return f"Hello, {name}!"', 'new_text': 'def greet(name):\n    """Greet the given name.\n\n    Args:\n        name (str): The name to greet.\n\n    Returns:\n        str: A greeting message.\n    """\n    return f"Hello, {name}!"'}
+```
+```text:ツール実行結果
 Edited greet.py
 ```
 ````text:回答
