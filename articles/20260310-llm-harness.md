@@ -405,6 +405,10 @@ https://qiita.com/7shi/items/e27866ce51c6b9a0f605
 
 https://blog.lai.so/agent/
 
+コーディングエージェント作成についての書籍を執筆されています。
+
+https://gihyo.jp/book/2026/978-4-297-15565-0
+
 TypeScript と Gemini を使ってコーディングエージェントを自作する記事です。MCP をサポートしており、ファイルの読み書きも MCP 経由で行います。
 
 https://azukiazusa.dev/blog/build-your-own-coding-ai-agent/
@@ -422,5 +426,5 @@ https://zenn.dev/sakasegawa/articles/af8ede2e4d7da4
 https://nyosegawa.github.io/posts/harness-engineering-best-practices-2026/
 
 :::message
-ここで紹介させていただいた [laiso](https://x.com/laiso) さん、[azukiazusa](https://x.com/azukiazusa9) さん、[逆瀬川](https://x.com/gyakuse) さんは、レベルの高い記事を書いておられるので要注目です。
+ここで紹介させていただいた [laiso](https://x.com/laiso) さん、[azukiazusa](https://x.com/azukiazusa9) さん、[逆瀬川](https://x.com/gyakuse)さんは、レベルの高い記事を書いておられるので要注目です。
 :::
