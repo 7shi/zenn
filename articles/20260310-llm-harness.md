@@ -32,7 +32,7 @@ published: true
 
 LLM は本来、テキストを生成することしかできません。そこに外部操作を組み込むための仕組みが「ツールコール」です。
 
-ハーネスの実装においては、まず「LLM から呼び出すための関数」を Python 側で定義します。そして、それらの関数の名前・目的・引数の情報を LLM に提示することで、LLM は「どのツールを、どんな引数で実行すべきか」を判断し、ツールの実行依頼を返せるようになります。
+ハーネスの実装においては、まずツールとして「LLM から呼び出すための関数」を Python 側で定義します。そして、それらの関数の名前・目的・引数の情報をツールリストとして LLM に渡すことで、LLM は「どのツールを、どんな引数で実行すべきか」を判断し、ツールの実行依頼を返せるようになります。
 
 ## ツールの実装
 
@@ -70,22 +70,40 @@ def bash(command: str) -> str:
         return "Error: Timeout (120s)"
 ```
 
-LLM は "Run a shell command." という情報を踏まえて、プロンプトの内容から「このタスクを達成するためにはシェルコマンドを実行する必要がある」と判断した場合、`bash` ツールを実行するよう依頼を返します。それを受け取ったコード側でツールを実行して結果を渡すことで、最終的な回答が得られます。
+LLM は "Run a shell command." という情報を踏まえて、プロンプトの内容から「このタスクを達成するためにはシェルコマンドを実行する必要がある」と判断した場合、`bash` ツールを実行するよう依頼を返します。それを受け取ったハーネス側でツールを実行して結果を渡すことで、最終的な回答が得られます。
 
-:::message
-具体的なフローは、後でコードを引用しながら説明します。
-:::
+```mermaid
+sequenceDiagram
+    participant User as ユーザー
+    participant Middleware as ハーネス
+    participant LLM
+    participant External System as ツール
+    
+    rect rgb(240, 240, 255)
+    note right of User: ツールコールフロー
+    User->>Middleware: (1)プロンプト
+    Middleware->>LLM: ツールリスト＋プロンプト
+    LLM->>Middleware: (2)ツール実行依頼
+    Middleware->>External System: ツール実行
+    External System->>Middleware: (3)実行結果
+    Middleware->>LLM: (3)実行結果
+    LLM->>User: (4)最終回答
+    end
+```
 
-使用例: `カレントディレクトリにあるすべてのPythonファイルを一覧表示する`
+使用例：
 
-```text:ツール実行依頼
+```text:(1)プロンプト
+カレントディレクトリにあるすべてのPythonファイルを一覧表示する
+```
+```text:(2)ツール実行依頼
 bash{'command': 'ls -la *.py'}
 ```
-```text:ツール実行結果
+```text:(3)実行結果
 -rw-r--r-- 1 7shi 7shi 180  3月 10 20:01 greet.py
 -rw-r--r-- 1 7shi 7shi  23  3月 10 19:18 hello.py
 ```
-```text:回答
+```text:(4)最終回答
 カレントディレクトリにあるPythonファイルは以下の通りです：
 
 - `greet.py` (180 bytes)
@@ -139,15 +157,18 @@ def read_file(path: str, limit: int = None) -> str:
         return f"Error: {e}"
 ```
 
-使用例: `hello.pyはどのような処理を行っていますか？`
+使用例：
 
-```text:ツール実行依頼
+```text:(1)プロンプト
+`hello.pyはどのような処理を行っていますか？`
+```
+```text:(2)ツール実行依頼
 read_file{'path': 'hello.py', 'limit': 10}
 ```
-```text:ツール実行結果
+```text:(3)実行結果
 print("Hello, World!")
 ```
-````text:回答
+````text:(4)最終回答
 `hello.py` ファイルには、以下の1行のコードが含まれています。
 
 ```python
@@ -183,15 +204,18 @@ def write_file(path: str, content: str) -> str:
         return f"Error: {e}"
 ```
 
-使用例: `greet(name)関数を持つgreet.pyというファイルを作成する`
+使用例：
 
-```text:ツール実行依頼
+```text:(1)プロンプト
+`greet(name)関数を持つgreet.pyというファイルを作成する`
+```
+```text:(2)ツール実行依頼
 write_file{'path': 'greet.py', 'content': 'def greet(name):\n    return f"Hello, {name}!"\n'}
 ```
-```text:ツール実行結果
+```text:(3)実行結果
 Wrote 46 bytes to greet.py
 ```
-````text:回答
+````text:(4)最終回答
 ファイル「greet.py」を英語で記述して作成しました。内容は以下の通りです：
 
 ```python
@@ -230,15 +254,18 @@ def edit_file(path: str, old_text: str, new_text: str) -> str:
         return f"Error: {e}"
 ```
 
-使用例: `greet.pyを編集して関数にdocstringを追加する`
+使用例：
 
-```text:ツール実行依頼
+```text:(1)プロンプト
+`greet.pyを編集して関数にdocstringを追加する`
+```
+```text:(2)ツール実行依頼
 edit_file{'path': 'greet.py', 'old_text': 'def greet(name):\n    return f"Hello, {name}!"', 'new_text': 'def greet(name):\n    """Greet the given name.\n\n    Args:\n        name (str): The name to greet.\n\n    Returns:\n        str: A greeting message.\n    """\n    return f"Hello, {name}!"'}
 ```
-```text:ツール実行結果
+```text:(3)実行結果
 Edited greet.py
 ```
-````text:回答
+````text:(4)最終回答
 greet.py に docstring を追加しました。編集後のファイルの中身は以下の通りです：
 
 ```python
@@ -405,7 +432,7 @@ https://github.com/7shi/learn-ollama-code
 
 https://note.com/7shi/n/n9b7839879be0
 
-MCP はツールをユーザー側で追加できるように標準化した仕組みに相当します。MCP とツールコール（Function calling とも呼ばれる）を比較して解説した記事です。
+ツールをユーザー側で追加できるように標準化した仕組みが MCP です。MCP をツールコール（Function calling とも呼ばれる）と比較して解説した記事です。
 
 https://qiita.com/7shi/items/e27866ce51c6b9a0f605
 
