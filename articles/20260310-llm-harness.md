@@ -403,6 +403,10 @@ https://qiita.com/7shi/items/e27866ce51c6b9a0f605
 
 ## 参考
 
+ここで紹介させていただいた [laiso](https://x.com/laiso) さん、[azukiazusa](https://x.com/azukiazusa9) さん、[逆瀬川](https://x.com/gyakuse)さんは、レベルの高い記事を書いておられるので必見です。
+
+### laiso さん
+
 各種コーディングエージェントについてのまとめ記事です。
 
 https://blog.lai.so/agent/
@@ -410,6 +414,8 @@ https://blog.lai.so/agent/
 コーディングエージェント作成についての書籍を執筆されています。
 
 https://gihyo.jp/book/2026/978-4-297-15565-0
+
+### azukiazusa さん
 
 TypeScript と Gemini を使ってコーディングエージェントを自作する記事です。MCP をサポートしており、ファイルの読み書きも MCP 経由で行います。
 
@@ -419,6 +425,8 @@ https://azukiazusa.dev/blog/build-your-own-coding-ai-agent/
 
 https://azukiazusa.dev/blog/enable-claude-code-tool-search-to-reduce-mcp-token-usage/
 
+### 逆瀬川さん
+
 コーディングエージェントの歴史をたどりつつ、サンプル実装も解説されています。
 
 https://zenn.dev/sakasegawa/articles/af8ede2e4d7da4
@@ -426,7 +434,3 @@ https://zenn.dev/sakasegawa/articles/af8ede2e4d7da4
 ハーネスの効果的な利用方法が解説されています。特に、実装に至った判断を残しておくのは重要です。ハーネスの仕組みがイメージできていれば、より効果的に利用できそうです。
 
 https://nyosegawa.github.io/posts/harness-engineering-best-practices-2026/
-
-:::message
-ここで紹介させていただいた [laiso](https://x.com/laiso) さん、[azukiazusa](https://x.com/azukiazusa9) さん、[逆瀬川](https://x.com/gyakuse)さんは、レベルの高い記事を書いておられるので要注目です。
-:::
