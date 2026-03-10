@@ -8,7 +8,7 @@ published: true
 
 本記事では、いわゆる「AI コーディングエージェント」の仕組みを解剖します。単なる「チャット」がどのようにして「一連の作業の自動実行」へと変わるのか、その背後にあるメカニズムを探ります。
 
-学習用の実装を使用します。オリジナルは Anthropic SDK を使用していましたが、Ollama に移植したフォークです。
+学習用の実装を使用します。オリジナルは Anthropic SDK を使用していますが、Ollama に移植したフォークです。
 
 - [s02_tool_use.py](https://github.com/7shi/learn-ollama-code/blob/feature/migrate-to-ollama/agents/s02_tool_use.py)（[ドキュメント](https://github.com/7shi/learn-ollama-code/blob/feature/migrate-to-ollama/docs/ja/s02-tool-use.md)）
 
@@ -379,7 +379,7 @@ def agent_loop(messages: list):
 
 ここまで見てきたように、エージェントを実用的なものにしているのは、LLM の賢さだけではなく、それを制御する「ハーネス」の設計にあります。
 
-1.  **安全なツール設計**：`safe_path` などによって物理的に保護された関数群
+1.  **安全なツール設計**：`safe_path` などによって保護された関数群
 2.  **自律的な駆動**：実行結果を自己フィードバックし、目的達成まで止まらない二重ループ構造
 3.  **疎結合な拡張性**：ディスパッチマップにより、ツールをいくつ追加してもメインループのコードが変わらない仕組み
 
