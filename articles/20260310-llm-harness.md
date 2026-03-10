@@ -72,11 +72,14 @@ def bash(command: str) -> str:
 
 LLM は "Run a shell command." という情報を踏まえて、プロンプトの内容から「このタスクを達成するためにはシェルコマンドを実行する必要がある」と判断した場合に、`bash` ツールを実行するよう依頼します。
 
-```text:使用例
-s02 >> カレントディレクトリにあるすべてのPythonファイルを一覧表示する
+使用例: `カレントディレクトリにあるすべてのPythonファイルを一覧表示する`
+
+```text:ツールコール
 bash{'command': 'ls -la *.py'}
 -rw-r--r-- 1 7shi 7shi 180  3月 10 20:01 greet.py
 -rw-r--r-- 1 7shi 7shi  23  3月 10 19:18 hello.py
+```
+```text:回答
 カレントディレクトリにあるPythonファイルは以下の通りです：
 
 - `greet.py` (180 bytes)
@@ -133,10 +136,14 @@ def read_file(path: str, limit: int = None) -> str:
     except Exception as e:
         return f"Error: {e}"
 ```
-````text:使用例
-s02 >> hello.pyはどのような処理を行っていますか？
+
+使用例: `hello.pyはどのような処理を行っていますか？`
+
+```text:ツールコール
 read_file{'path': 'hello.py', 'limit': 10}
 print("Hello, World!")
+```
+````text:回答
 `hello.py` ファイルには、以下の1行のコードが含まれています。
 
 ```python
@@ -171,10 +178,14 @@ def write_file(path: str, content: str) -> str:
     except Exception as e:
         return f"Error: {e}"
 ```
-````text:使用例
-s02 >> greet(name)関数を持つgreet.pyというファイルを作成する
+
+使用例: `greet(name)関数を持つgreet.pyというファイルを作成する`
+
+```text:ツールコール
 write_file{'path': 'greet.py', 'content': 'def greet(name):\n    return f"Hello, {name}!"\n'}
 Wrote 46 bytes to greet.py
+```
+````text:回答
 ファイル「greet.py」を英語で記述して作成しました。内容は以下の通りです：
 
 ```python
@@ -212,10 +223,14 @@ def edit_file(path: str, old_text: str, new_text: str) -> str:
     except Exception as e:
         return f"Error: {e}"
 ```
-````text:使用例
-s02 >> greet.pyを編集して関数にdocstringを追加する
+
+使用例: `greet.pyを編集して関数にdocstringを追加する`
+
+```text:ツールコール
 edit_file{'path': 'greet.py', 'old_text': 'def greet(name):\n    return f"Hello, {name}!"', 'new_text': 'def greet(name):\n    """Greet the given name.\n\n    Args:\n        name (str): The name to greet.\n\n    Returns:\n        str: A greeting message.\n    """\n    return f"Hello, {name}!"'}
 Edited greet.py
+```
+````text:回答
 greet.py に docstring を追加しました。編集後のファイルの中身は以下の通りです：
 
 ```python
