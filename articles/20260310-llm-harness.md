@@ -348,8 +348,8 @@ if __name__ == "__main__":
     history = [{"role": "system", "content": SYSTEM}]
     while True:
         try:
-            # ユーザーからの入力を受け付ける（プロンプトは水色）
-            query = input("\033[36ms02 >> \033[0m")
+            # ユーザーからの入力を受け付ける
+            query = input("s02 >> ")
         except (EOFError, KeyboardInterrupt):
             break
         # 終了コマンドのチェック
@@ -423,11 +423,11 @@ def agent_loop(messages: list):
         # 実行：指示されたツールを一つずつ呼び出す
         for tool in response.message.tool_calls:
             # ツールの名前と引数を表示（黄色）
-            print(f"\033[33m{tool.function.name}{tool.function.arguments}\033[0m")
-            # 関数を取得・実行して、実行結果を表示（黄色）
+            print(f"{Fore.YELLOW}{tool.function.name}{tool.function.arguments}{Style.RESET_ALL}")
+            # 関数を取得・実行して、実行結果を表示（緑色）
             handler = TOOL_HANDLERS.get(tool.function.name)
             output = handler(**tool.function.arguments) if handler else f"Unknown tool: {tool.function.name}"
-            print(f"\033[33m{str(output)[:200]}\033[0m")
+            print(f"{Fore.GREEN}{str(output)[:200]}{Style.RESET_ALL}")
             # 実行結果を履歴に追加、これにより次のループで LLM は結果を確認できる
             messages.append({"role": "tool", "content": str(output), "tool_name": tool.function.name})
 ```
