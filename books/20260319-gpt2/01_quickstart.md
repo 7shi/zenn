@@ -18,7 +18,7 @@ cd my-gpt2
 uv sync
 ```
 
-英語モデル（`openai-community/gpt2`）と日本語モデル（`rinna/japanese-gpt2-small`）をダウンロードします。
+英語モデル（[openai-community/gpt2](https://huggingface.co/openai-community/gpt2)）と日本語モデル（[rinna/japanese-gpt2-small](https://huggingface.co/rinna/japanese-gpt2-small)）をダウンロードします。
 
 ```bash
 make download
