@@ -8,19 +8,19 @@ title: "出力: ロジットの生成とサンプリング"
 
 1. テキスト
    - トークナイザー
-     - [BPE](03_tokenizer%252Emd)
-     - [SentencePiece](04_spiece%252Emd)
+     - [BPE](03_tokenizer)
+     - [SentencePiece](04_spiece)
 2. トークン ID 列
-   - [Embedding](05_embedding%252Emd)
+   - [Embedding](05_embedding)
 3. ベクトル列
    - Transformer Block × 12
-     - [LayerNorm](06_layer_norm%252Emd)
-     - [Attention](07_attention%252Emd)
-     - [残差接続](09_residual%252Emd)
-     - [LayerNorm](06_layer_norm%252Emd)
-     - [MLP](08_mlp%252Emd)
-     - [残差接続](09_residual%252Emd)
-   - [最終 LayerNorm](09_residual%252Emd)
+     - [LayerNorm](06_layer_norm)
+     - [Attention](07_attention)
+     - [残差接続](09_residual)
+     - [LayerNorm](06_layer_norm)
+     - [MLP](08_mlp)
+     - [残差接続](09_residual)
+   - [最終 LayerNorm](09_residual)
    - **LM Head** ← この章
 4. ロジット
    - **サンプリング** ← この章
@@ -46,7 +46,7 @@ return x @ self.wte.T  # → (len(x), 50257)
 
 # ロジットから確率へ
 
-ロジットは生のスコアであり、負の値や非常に大きな値も含むため、そのままでは確率として扱えません。Softmax（👉[07](07_attention%252Emd)）を適用することで、すべての値が 0〜1 の範囲に収まり、合計が 1 になる確率分布に変換されます。
+ロジットは生のスコアであり、負の値や非常に大きな値も含むため、そのままでは確率として扱えません。Softmax（👉[07](07_attention)）を適用することで、すべての値が 0〜1 の範囲に収まり、合計が 1 になる確率分布に変換されます。
 
 ロジットが最も高いトークンに最も高い確率が割り当てられ、スコアの差が大きいほど確率の偏りも大きくなります。
 
@@ -159,4 +159,4 @@ Step 3: 'Artificial Intelligence will be able'
 
 Step 3 では「be able」の後に「to」が来る確率が99%を超えています。文法的なパターンが確定すると、モデルの「迷い」は消え、決定論的な振る舞いになります。
 
-なお、この素朴な実装では毎回全トークンを再計算しています。次回（👉[11](11_kv_cache%252Emd)）説明する KV キャッシュを使えば、新しいトークンの計算だけで済むようになります。
+なお、この素朴な実装では毎回全トークンを再計算しています。次回（👉[11](11_kv_cache)）説明する KV キャッシュを使えば、新しいトークンの計算だけで済むようになります。

@@ -6,22 +6,22 @@ title: "SentencePiece トークナイザー（Unigram モデル）解説"
 
 1. テキスト
    - トークナイザー
-     - [BPE](03_tokenizer%252Emd)
+     - [BPE](03_tokenizer)
      - **SentencePiece** ← この章
 2. トークン ID 列
-   - [Embedding](05_embedding%252Emd)
+   - [Embedding](05_embedding)
 3. ベクトル列
    - Transformer Block × 12
-     - [LayerNorm](06_layer_norm%252Emd)
-     - [Attention](07_attention%252Emd)
-     - [残差接続](09_residual%252Emd)
-     - [LayerNorm](06_layer_norm%252Emd)
-     - [MLP](08_mlp%252Emd)
-     - [残差接続](09_residual%252Emd)
-   - [最終 LayerNorm](09_residual%252Emd)
-   - [LM Head](10_output%252Emd)
+     - [LayerNorm](06_layer_norm)
+     - [Attention](07_attention)
+     - [残差接続](09_residual)
+     - [LayerNorm](06_layer_norm)
+     - [MLP](08_mlp)
+     - [残差接続](09_residual)
+   - [最終 LayerNorm](09_residual)
+   - [LM Head](10_output)
 4. ロジット
-   - [サンプリング](10_output%252Emd)
+   - [サンプリング](10_output)
 5. 次のトークン
 
 # Unigram モデルとは？

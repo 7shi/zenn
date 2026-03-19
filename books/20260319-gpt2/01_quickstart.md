@@ -4,11 +4,17 @@ title: "まず動かしてみよう"
 
 技術的な詳細に入る前に、GPT-2 が実際にどう動くのかを体験しましょう。この章ではセットアップから文章生成まで、手を動かしながら GPT-2 の振る舞いを観察します。
 
+以下のリポジトリを使用します。
+
+https://github.com/7shi/my-gpt2
+
 # セットアップ
 
-依存関係をインストールします。
+リポジトリをクローンして、依存関係をインストールします。
 
 ```bash
+git clone https://github.com/7shi/my-gpt2.git
+cd my-gpt2
 uv sync
 ```
 
@@ -25,8 +31,7 @@ make download
 ```bash
 uv run my-gpt2 "Once upon a time"
 ```
-> Once upon a time when no one could make impressions many people wished they had touched others who did.
-> They stayed and drifted. Many don't even remember for years. One
+> Once upon a time when no one could make impressions many people wished they had touched others who did. They stayed and drifted. Many don't even remember for years. One
 
 GPT-2 は「次に来る単語を予測する」ことだけを学習したモデルです。質問に答えたり指示に従ったりする訓練は受けていませんが、書き出しの続きを確率的に生成できます。
 
@@ -111,15 +116,12 @@ Assistant:"
 ```bash
 uv run my-gpt2 -n 50 -t 0.8 "Once upon a time"
 ```
-> Once upon a time they understood what the situation was, that he had to survive.
-> So after being raised as a captive by his own father, he and his family lived a few years of
-> isolation and isolation on a deserted island. It wasn't until he met
+> Once upon a time they understood what the situation was, that he had to survive. So after being raised as a captive by his own father, he and his family lived a few years of isolation and isolation on a deserted island. It wasn't until he met
 
 ```bash
 uv run my-gpt2 -n 50 -t 0.8 -m rinna/japanese-gpt2-small "昔々あるところに"
 ```
-> 昔々あるところに、鳥が通り過ぎる。 いつもやってくる。 と。 変だわー、いろいろあってみじめに
-> 感じるこの頃のことだ。 やっぱりどこかで見たような表情をしている。 その隣の小さな池が大沼
+> 昔々あるところに、鳥が通り過ぎる。 いつもやってくる。 と。 変だわー、いろいろあってみじめに感じるこの頃のことだ。 やっぱりどこかで見たような表情をしている。 その隣の小さな池が大沼
 
 # ここまでのまとめ
 

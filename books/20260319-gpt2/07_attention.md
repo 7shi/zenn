@@ -2,26 +2,26 @@
 title: "Attention: 文脈の理解"
 ---
 
-Attention は GPT-2 が「文脈」を理解するための最も重要なコンポーネントです。各トークンが他のトークンとの関係性を計算し、文脈を取り込んだベクトルへと自身を更新します。LayerNorm（👉[06](06_layer_norm%252Emd)）を適用した後のベクトルに対して、この処理が行われます。
+Attention は GPT-2 が「文脈」を理解するための最も重要なコンポーネントです。各トークンが他のトークンとの関係性を計算し、文脈を取り込んだベクトルへと自身を更新します。LayerNorm（👉[06](06_layer_norm)）を適用した後のベクトルに対して、この処理が行われます。
 
 1. テキスト
    - トークナイザー
-     - [BPE](03_tokenizer%252Emd)
-     - [SentencePiece](04_spiece%252Emd)
+     - [BPE](03_tokenizer)
+     - [SentencePiece](04_spiece)
 2. トークン ID 列
-   - [Embedding](05_embedding%252Emd)
+   - [Embedding](05_embedding)
 3. ベクトル列
    - Transformer Block × 12
-     - [LayerNorm](06_layer_norm%252Emd)
+     - [LayerNorm](06_layer_norm)
      - **Attention** ← この章
-     - [残差接続](09_residual%252Emd)
-     - [LayerNorm](06_layer_norm%252Emd)
-     - [MLP](08_mlp%252Emd)
-     - [残差接続](09_residual%252Emd)
-   - [最終 LayerNorm](09_residual%252Emd)
-   - [LM Head](10_output%252Emd)
+     - [残差接続](09_residual)
+     - [LayerNorm](06_layer_norm)
+     - [MLP](08_mlp)
+     - [残差接続](09_residual)
+   - [最終 LayerNorm](09_residual)
+   - [LM Head](10_output)
 4. ロジット
-   - [サンプリング](10_output%252Emd)
+   - [サンプリング](10_output)
 5. 次のトークン
 
 # Attention

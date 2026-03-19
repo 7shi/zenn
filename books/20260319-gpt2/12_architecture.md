@@ -94,7 +94,7 @@ Attention がトークン間の「横方向」の処理なら、MLP はトーク
 
 # 12 層の意味
 
-層を経るごとに Embedding とのコサイン類似度は急速に低下します（👉[09](09_residual%252Emd)）。これは各層が異なる抽象度の特徴を担っていることを示唆しています。
+層を経るごとに Embedding とのコサイン類似度は急速に低下します（👉[09](09_residual)）。これは各層が異なる抽象度の特徴を担っていることを示唆しています。
 
 一般的に、Transformer の各層は以下のような傾向を持つことが知られています。
 
@@ -119,7 +119,7 @@ x = self.ln_f(x)                  # LM Head の前
 
 ブロック内の LayerNorm は Attention/MLP への入力を正規化し、計算を安定させます。残差ストリーム上の `x` 自体は正規化されず、情報がそのまま保持されます。
 
-最終 LayerNorm（ln_f）は、12層で蓄積されたスケールの増大（👉[09](09_residual%252Emd): 標準偏差 0.22 → 14.2）を出力の前に整える役割です。
+最終 LayerNorm（ln_f）は、12層で蓄積されたスケールの増大（👉[09](09_residual): 標準偏差 0.22 → 14.2）を出力の前に整える役割です。
 
 # GPT-2 から現代の LLM へ
 
@@ -137,6 +137,6 @@ GPT-2 のアーキテクチャは、現代の LLM の基本形です。大規模
 | 活性化関数 | GELU | SwiGLU |
 | Attention | 標準 MHA | GQA / MLA |
 
-Attention の行に注目すると、GQA（Grouped Query Attention）や MLA（Multi-head Latent Attention）は、KV キャッシュ（👉[11](11_kv_cache%252Emd)）のメモリ削減を主な動機としています。標準の MHA (Multi-head Attention) では全ヘッドが独立に K, V を持つため、層数やコンテキスト長の増大に伴いキャッシュが膨大になります。GQA は複数のヘッドで K, V を共有することで、推論時のメモリ使用量を抑えます。
+Attention の行に注目すると、GQA（Grouped Query Attention）や MLA（Multi-head Latent Attention）は、KV キャッシュ（👉[11](11_kv_cache)）のメモリ削減を主な動機としています。標準の MHA (Multi-head Attention) では全ヘッドが独立に K, V を持つため、層数やコンテキスト長の増大に伴いキャッシュが膨大になります。GQA は複数のヘッドで K, V を共有することで、推論時のメモリ使用量を抑えます。
 
 構造の違いは効率やスケーラビリティの改善であり、「残差ストリーム上で Attention と MLP を繰り返す」という根本的な設計は共通しています。GPT-2 のコンパクトな実装で理解した原理は、そのまま現代の LLM にも応用できます。

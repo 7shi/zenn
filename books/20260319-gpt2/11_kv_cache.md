@@ -2,31 +2,31 @@
 title: "KV キャッシュ: 自己回帰生成の高速化"
 ---
 
-GPT-2 は自己回帰で1トークンずつ生成します（👉[10](10_output%252Emd)）。素朴な実装では毎回全トークンを再計算しますが、KV キャッシュを使うと新しいトークンの計算だけで済みます。
+GPT-2 は自己回帰で1トークンずつ生成します（👉[10](10_output)）。素朴な実装では毎回全トークンを再計算しますが、KV キャッシュを使うと新しいトークンの計算だけで済みます。
 
 1. テキスト
    - トークナイザー
-     - [BPE](03_tokenizer%252Emd)
-     - [SentencePiece](04_spiece%252Emd)
+     - [BPE](03_tokenizer)
+     - [SentencePiece](04_spiece)
 2. トークン ID 列
-   - [Embedding](05_embedding%252Emd)
+   - [Embedding](05_embedding)
 3. ベクトル列
    - Transformer Block × 12
-     - [LayerNorm](06_layer_norm%252Emd)
-     - [Attention](07_attention%252Emd) — **KV キャッシュ** ← この章
-     - [残差接続](09_residual%252Emd)
-     - [LayerNorm](06_layer_norm%252Emd)
-     - [MLP](08_mlp%252Emd)
-     - [残差接続](09_residual%252Emd)
-   - [最終 LayerNorm](09_residual%252Emd)
-   - [LM Head](10_output%252Emd)
+     - [LayerNorm](06_layer_norm)
+     - [Attention](07_attention) — **KV キャッシュ** ← この章
+     - [残差接続](09_residual)
+     - [LayerNorm](06_layer_norm)
+     - [MLP](08_mlp)
+     - [残差接続](09_residual)
+   - [最終 LayerNorm](09_residual)
+   - [LM Head](10_output)
 4. ロジット
-   - [サンプリング](10_output%252Emd)
+   - [サンプリング](10_output)
 5. 次のトークン
 
 # 毎回の再計算
 
-自己回帰生成（👉[10](10_output%252Emd)）では、トークンを1つ生成するたびに入力全体をモデルに通していました。
+自己回帰生成（👉[10](10_output)）では、トークンを1つ生成するたびに入力全体をモデルに通していました。
 
 ```
 Step 1: [A, B, C]       → 全3トークンを計算 → 次のトークン D
@@ -34,7 +34,7 @@ Step 2: [A, B, C, D]    → 全4トークンを計算 → 次のトークン E
 Step 3: [A, B, C, D, E] → 全5トークンを計算 → 次のトークン F
 ```
 
-Transformer Block の中で他のトークンを参照するのは Attention だけです。MLP（👉[08](08_mlp%252Emd)）、LayerNorm、Embedding、LM Head はすべてトークン単位の独立した処理です。さらに因果マスク（👉[07](07_attention%252Emd)）により、各トークンは自分より後のトークンを参照できません。つまり Step 2 での A, B, C の Attention の計算結果は Step 1 と同じです。毎回同じ計算を繰り返すのは無駄です。
+Transformer Block の中で他のトークンを参照するのは Attention だけです。MLP（👉[08](08_mlp)）、LayerNorm、Embedding、LM Head はすべてトークン単位の独立した処理です。さらに因果マスク（👉[07](07_attention)）により、各トークンは自分より後のトークンを参照できません。つまり Step 2 での A, B, C の Attention の計算結果は Step 1 と同じです。毎回同じ計算を繰り返すのは無駄です。
 
 そこで、Attention で計算した K と V を保存しておき、次のステップではそれを再利用する手法が **KV キャッシュ** です。これを使うと、生成ループは次のように変わります。
 
@@ -56,11 +56,11 @@ for _ in range(n_tokens_to_generate - 1):
 
 ## 補足：「KV キャッシュ」の名前について
 
-「KV」という名前から、プログラミングの Key-Value ストア（辞書型）のように「キーで検索して値を取得する」仕組みを想像するかもしれません。しかし KV キャッシュの K, V は Attention の Q, K, V（👉[07](07_attention%252Emd)）のうちの K（Key）と V（Value）を指しています。辞書型のような検索は行わず、計算済みの K, V の行列をそのまま保存しておき、次のステップで再計算を省くためのキャッシュです。
+「KV」という名前から、プログラミングの Key-Value ストア（辞書型）のように「キーで検索して値を取得する」仕組みを想像するかもしれません。しかし KV キャッシュの K, V は Attention の Q, K, V（👉[07](07_attention)）のうちの K（Key）と V（Value）を指しています。辞書型のような検索は行わず、計算済みの K, V の行列をそのまま保存しておき、次のステップで再計算を省くためのキャッシュです。
 
 # KV キャッシュの仕組み
 
-Attention（👉[07](07_attention%252Emd)）では、入力トークンのベクトルから Q, K, V を計算し、Q と K の内積でスコアを求め、V の加重平均を取ります。
+Attention（👉[07](07_attention)）では、入力トークンのベクトルから Q, K, V を計算し、Q と K の内積でスコアを求め、V の加重平均を取ります。
 
 ```python
 # 入力ベクトルから Q, K, V を一括計算
@@ -85,7 +85,7 @@ Q, K, V はいずれも入力 `x` から計算されます。最初の層では 
 
 新しいトークンの Q, K, V を計算し、K と V はキャッシュに追加します。Attention の計算では、Q は新しいトークン 1 つ分ですが、K と V はキャッシュ済みの全トークン分を使います。過去のトークンの Q は再利用する場面がないためキャッシュ不要で、保存するのは K と V だけで十分です。この非対称性が「KV キャッシュ」という名前の由来です。
 
-なお、Q が新しいトークン 1 つ分しかないため、scores, probs, out も必然的にその 1 つ分だけになります。次のトークンの予測には最終トークンの出力だけを使う（👉[10](10_output%252Emd)）ので、これで十分です。
+なお、Q が新しいトークン 1 つ分しかないため、scores, probs, out も必然的にその 1 つ分だけになります。次のトークンの予測には最終トークンの出力だけを使う（👉[10](10_output)）ので、これで十分です。
 
 # 計算量の比較
 
@@ -132,7 +132,7 @@ mask = np.tril(np.ones((kv_len, kv_len)))[-seq_len:]
 
 ## TransformerBlock: キャッシュの受け渡し
 
-Attention にキャッシュを渡し、更新されたキャッシュを返します。MLP はトークン単位の独立した処理（👉[08](08_mlp%252Emd)）なので変更不要です。
+Attention にキャッシュを渡し、更新されたキャッシュを返します。MLP はトークン単位の独立した処理（👉[08](08_mlp)）なので変更不要です。
 
 ```python
 def __call__(self, x, kv_cache=None):
