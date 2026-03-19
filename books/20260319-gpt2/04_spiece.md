@@ -1,5 +1,5 @@
 ---
-title: "SentencePiece トークナイザー（Unigram モデル）解説"
+title: "SentencePiece トークナイザー (Unigram)"
 ---
 
 `rinna/japanese-gpt2-small` は BPE ではなく SentencePiece の **Unigram モデル**を使用します。`my_gpt2/spiece.py` では、外部ライブラリなしに `spiece.model` を直接読み込んでエンコード・デコードを行います。
