@@ -29,20 +29,20 @@ title: "残差接続と Transformer Block"
 Transformer Block の内部は次の構造です。GPT-2 ではこのブロックを12個積み重ねることで、テキストの高度な意味表現を獲得します。
 
 ```text
-Input ─────┐
-  ↓        │
-LayerNorm  │
-  ↓        │
-Attention  │
-  ↓        │
-(+) ←──────┘ 残差接続
-  ├────────┐
-  ↓        │
-LayerNorm  │
-  ↓        │
-MLP        │
-  ↓        │
-(+) ←──────┘ 残差接続
+Input────┐
+  │      ↓
+  │  LayerNorm
+  │      ↓
+  │  Attention
+  ↓      │
+ (+)←────┘ 残差接続
+  ├──────┐
+  │      ↓
+  │  LayerNorm
+  │      ↓
+  │     MLP
+  ↓      │
+ (+)←────┘ 残差接続
   ↓
 Output
 ```

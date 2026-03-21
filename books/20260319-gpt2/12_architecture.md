@@ -33,20 +33,20 @@ class GPT2:
 Transformer Block の内部構造とコードを再掲します。
 
 ```text
-Input ─────┐
-  ↓        │
-LayerNorm  │
-  ↓        │
-Attention  │
-  ↓        │
-(+) ←──────┘
-  ├────────┐
-  ↓        │
-LayerNorm  │
-  ↓        │
-MLP        │
-  ↓        │
-(+) ←──────┘
+Input────┐
+  │      ↓
+  │  LayerNorm
+  │      ↓
+  │  Attention
+  ↓      │
+ (+)←────┘ 残差接続
+  ├──────┐
+  │      ↓
+  │  LayerNorm
+  │      ↓
+  │     MLP
+  ↓      │
+ (+)←────┘ 残差接続
   ↓
 Output
 ```
