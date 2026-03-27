@@ -20,6 +20,16 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 https://docs.anthropic.com/ja/docs/claude-code/settings
 
+## 注意
+
+:::message alert
+本記事で紹介している方法は、現在非推奨です。
+
+新しい設定方法につきましては、DK さんの記事をご参照ください。
+:::
+
+https://zenn.dev/dk_/articles/8e4726b71f7803
+
 ## 署名を無効にする方法
 
 設定ファイルを書き換えます。どの範囲で設定するかによって設定ファイルは変わります。
