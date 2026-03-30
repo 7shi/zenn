@@ -7,8 +7,10 @@ published: true
 ---
 
 :::message
-この記事は「[GPT-2 推論エンジン入門](https://zenn.dev/7shi/books/20260319-gpt2)」の簡約版です。各トピックの詳細な解説やコードは本編をご参照ください。
+本記事は『GPT-2 推論エンジン入門』の簡約版です。各トピックの詳細な解説は本編をご参照ください。
 :::
+
+https://zenn.dev/7shi/books/20260319-gpt2
 
 # GPT-2 とは
 
