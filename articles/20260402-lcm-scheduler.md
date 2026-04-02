@@ -8,10 +8,11 @@ published: true
 
 画像生成のステップ数を短縮する LCM の調査のため、スケジューラーを独自実装しました。ちょっとしたコードの違いで絵柄が変わるのが興味深かったため、修正の経緯を残しておきます。
 
-実装: [my_sd15/scheduler.py](https://github.com/7shi/my-sd15/blob/main/my_sd15/scheduler.py)
+- 実装: [my_sd15/scheduler.py](https://github.com/7shi/my-sd15/blob/main/my_sd15/scheduler.py)
+- パラメーターなど: [lcm-scheduler/Makefile](https://github.com/7shi/my-sd15/blob/main/lcm-scheduler/Makefile)
 
 :::message
-引用したコードは、変更箇所が分かりやすいように整理したものです。実際のコミット履歴とは異なりますが、動作自体は同じです。
+引用したコードは、変更箇所が分かりやすいように整理しています。実際のコミット履歴とは異なりますが、動作自体は同じです。
 :::
 
 ## LCMScheduler の目的
@@ -110,6 +111,12 @@ def step(self, noise_pred, t, sample):
         return sqrt(alpha_t_prev) * pred_x0 + sqrt(1 - alpha_t_prev) * noise_pred
 ```
 
+比較のため、LCM LoRA を適用して DDIM で 10 ステップ生成しました。
+
+![ddim.jpg](/images/20260402-lcm-scheduler/ddim.jpg)
+
+形状は認識できますが、画像全体にメッシュ状のノイズパターンが発生しています。
+
 ## LCM
 
 LCMScheduler は LoRA サポートの一部として DDIM をベースに実装されました。
@@ -140,7 +147,7 @@ def step(self, noise_pred, t, sample):
 
 ![lcm-1.jpg](/images/20260402-lcm-scheduler/lcm-1.jpg)
 
-画像全体にメッシュ状のノイズパターンが発生しています。
+DDIM とはやや絵柄が変わりましたが、構図は似ています。画像全体にメッシュ状のノイズパターンが発生しているのも同様です。
 
 ### 修正 1：再ノイズ化とステップ分岐
 
