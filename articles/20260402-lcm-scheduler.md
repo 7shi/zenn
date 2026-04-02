@@ -20,7 +20,7 @@ published: true
 
 LCM (Latent Consistency Model) は、この推論ステップ数を 2〜4 回にまで削減する手法です。専用の LoRA を適用した U-Net と組み合わせて使います。LCM LoRA は学習時に CFG の効果を LoRA の重みに焼き込んでいるため、推論時は `cfg_scale=1.0` として U-Net を 1 回だけ呼び出せば済みます（ネガティブプロンプトが効かなくなります）。ステップ数の削減と CFG 不要化の両方により、大幅な高速化が得られます。
 
-## 仕様（SPEC.md §7b / 論文 Algorithm 2）
+## 仕様
 
 論文: [Luo et al. "Latent Consistency Models" (2023)](https://arxiv.org/abs/2310.04378)
 
