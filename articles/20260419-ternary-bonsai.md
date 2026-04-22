@@ -34,7 +34,7 @@ https://prismml.com/news/ternary-bonsai
 https://huggingface.co/prism-ml/Ternary-Bonsai-8B-gguf
 :::
 
-しかし Windows でこの恩恵を受けるのは簡単ではありません。公開されているモデルにはいくつかの形式がありますが、それぞれに課題があります。
+記事執筆時点では 3 つの形式でモデルが公開されていましたが、Windows ですんなり動かせない状況でした。
 
 **MLX 版** ([prism-ml/Ternary-Bonsai-8B-mlx-2bit](https://huggingface.co/prism-ml/Ternary-Bonsai-8B-mlx-2bit)): 1.58 ビットの重みをネイティブに扱い、M4 Pro で 82 toks/sec という高速推論を実現します。ただし MLX は Apple Silicon 専用のフレームワークであり、Windows では利用できません。
 
