@@ -34,15 +34,13 @@ https://prismml.com/news/ternary-bonsai
 https://huggingface.co/prism-ml/Ternary-Bonsai-8B-gguf
 :::
 
-記事執筆時点では 3 つの形式でモデルが公開されていましたが、Windows ですんなり動かせない状況でした。
+記事執筆時点では 3 つの形式でモデルが公開されていましたが、Windows では**コンパクトなまま動かす方法が用意されていない**という状況でした。
 
 **MLX 版** ([prism-ml/Ternary-Bonsai-8B-mlx-2bit](https://huggingface.co/prism-ml/Ternary-Bonsai-8B-mlx-2bit)): 1.58 ビットの重みをネイティブに扱い、M4 Pro で 82 toks/sec という高速推論を実現します。ただし MLX は Apple Silicon 専用のフレームワークであり、Windows では利用できません。
 
 **safetensors 版** ([prism-ml/Ternary-Bonsai-8B-unpacked](https://huggingface.co/prism-ml/Ternary-Bonsai-8B-unpacked)): 3 値の重みを通常の浮動小数点数に展開（unpack）した形式です。Transformers ライブラリから直接読み込めるので動作させること自体は容易ですが、重みは FP16 の dense テンソルに戻っているため、モデルサイズは通常の 8B モデルと同等の約 16GB になります。1.58 ビットのコンパクトさも演算上のアドバンテージも失われています。
 
 **ONNX 版** ([onnx-community/Ternary-Bonsai-8B-ONNX](https://huggingface.co/onnx-community/Ternary-Bonsai-8B-ONNX)): 2 ビット packed 形式の ONNX モデルが公開されています。サイズは約 1.75GB とコンパクトですが、詳細な動作手順は提供されていません。実際に試すと、現状の ONNX Runtime は `MatMulNBits` op の 2 ビットモードに対応しておらず、そのままでは推論を実行できません。
-
-つまり Windows ユーザーにとっては、**コンパクトなまま動かす方法が用意されていない**という状況でした。
 
 ## 2 つのルートで変換を試みる
 
