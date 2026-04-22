@@ -29,7 +29,7 @@ https://prismml.com/news/ternary-bonsai
 ## Windows ユーザーの壁
 
 :::message
-【2026.04.22 追記】GGUF 版が公開され、独自の llama.cpp フォークで動くようになっています。
+【2026/04/22 追記】GGUF 版が公開され、独自の llama.cpp フォークで動くようになっています。
 
 https://huggingface.co/prism-ml/Ternary-Bonsai-8B-gguf
 :::
