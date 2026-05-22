@@ -382,7 +382,7 @@ if __name__ == "__main__":
 :::message
 OpenAI の API では、サーバー側での履歴の保持をサポートする [Responses API](https://developers.openai.com/api/reference/responses/overview) も提供されています。これを利用すれば毎回すべての履歴を送る必要はなく、キャッシュ効率も向上します。
 
-ただし、Codex CLI では履歴を最適化しながら送ることが想定されているらしく、専用のエンドポイントでは履歴の保持がサポートされていません。👉[調査実装](https://github.com/7shi/codex-oauth)
+ただし、Codex CLI では「[リクエストを完全にステートレスに保ち、ゼロデータ保持（ZDR）構成をサポートするため](https://openai.com/ja-JP/index/unrolling-the-codex-agent-loop/)」、専用のエンドポイントでは履歴の保持がサポートされていません。👉[調査実装](https://github.com/7shi/codex-oauth)
 :::
 
 ### エージェントループ：ツールの実行
