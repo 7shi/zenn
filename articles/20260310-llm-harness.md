@@ -39,21 +39,21 @@ sequenceDiagram
     participant Terminal as ターミナル
     
     rect rgb(240, 240, 255)
-    User->>LLM: プロンプト
-    LLM->>User: コマンド実行依頼
-    User->>Terminal: コマンド実行
-    Terminal->>User: 実行結果
-    User->>LLM: 実行結果を貼り付け
-    LLM->>User: 最終回答
+    User->>LLM: 1. プロンプト
+    LLM->>User: 2. コマンド実行依頼
+    User->>Terminal: 3. コマンド実行
+    Terminal->>User: 3. 実行結果
+    User->>LLM: 3. 実行結果を貼り付け
+    LLM->>User: 4. 最終回答
     end
 ```
 
-例：
+**例：**
 
-- User: IPアドレスを調べたい
-- LLM: `ip addr` コマンドを実行してください。
-- User: （コマンドを実行して結果をコピー＆ペースト）
-- LLM: IPアドレスは 192.168.xxx.xxx です。
+1. User: IPアドレスを調べたい
+2. LLM: `ip addr` コマンドを実行してください。
+3. User: （コマンドを実行して結果をコピー＆ペースト）
+4. LLM: IPアドレスは 192.168.xxx.xxx です。
 
 このような「コマンドの実行と結果の受け渡し」を行う専用の「ツール」を定義して、自動で呼び出せるようにする仕組みが「ツールコール」です。
 
