@@ -48,7 +48,7 @@ callCC f = Cont $ \c -> runCont (f (\x -> Cont $ \_ -> c x)) c
 :::message
 現在の GHC では `Monad` のスーパークラスである `Functor` と `Applicative` のインスタンスも必要です。`Control.Monad` から `liftM` と `ap` を import して `fmap = liftM`、`(<*>) = ap` と書けば済みます。
 
-標準の [Control.Monad.Trans.Cont](https://hackage.haskell.org/package/transformers-0.6.1.0/docs/Control-Monad-Trans-Cont.html) を使っても、以降の実装は同じように動きます。
+標準の [`Control.Monad.Trans.Cont`](https://hackage.haskell.org/package/transformers-0.6.1.0/docs/Control-Monad-Trans-Cont.html) を使っても、以降の実装は同じように動きます。
 :::
 
 これを JavaScript に移植したものが元記事の実装です。以降のコードを読む際の対応表として掲載します。
