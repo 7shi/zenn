@@ -3,18 +3,10 @@ title: "Haskell の IO モナドへの道"
 emoji: "📜"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["haskell", "monad"]
-published: false
+published: true
 ---
 
-Haskell は副作用を IO モナドで扱います。そこに至るまでは「遅延ストリーム → 継続 I/O → `do` 記法」という道のりがありました。当時のコンセプトを現行の GHC で再現しながら、その道をたどります。
-
-:::message
-歴史そのものより「なぜ IO モナドがこの形なのか」を掴むための記事です。当時の処理系が手元にないため、実行結果はあくまで動作イメージです。
-:::
-
-検証コードは以下に置きました。
-
-* [`check/20260731-haskell-io-history/`](https://github.com/7shi/zenn/tree/main/check/20260731-haskell-io-history)
+Haskell は副作用を IO モナドで扱います。そこに至るまでは**遅延ストリーム**と**継続 I/O**という道のりがありました。当時のコンセプトを現行の GHC で再現しながら、その道をたどります。
 
 :::message
 本記事の執筆には Claude Code (Opus 5) を利用しました。
@@ -22,11 +14,13 @@ Haskell は副作用を IO モナドで扱います。そこに至るまでは�
 
 # 典拠
 
-以下の論文の 7 節に基づきます。設計に関わった 4 人による回顧録です。
+以下の論文の 7 章に基づきます。設計に関わった 4 人による回顧録です。
 
 * Paul Hudak, John Hughes, Simon Peyton Jones, Philip Wadler, [*A History of Haskell: Being Lazy with Class*](https://www.microsoft.com/en-us/research/publication/a-history-of-haskell-being-lazy-with-class/) (HOPL III, 2007)
 
-本記事に出て来る `Behaviour` などの型定義とコード（論文中の Figure 3〜6）は、この論文が引用する Haskell 1.0 Report そのものではなく、現行の GHC で動くように移植したコードです。
+本記事に出て来る `Behaviour` などの型定義とコード（論文中の Figure 3〜6）は、この論文が引用する当時の実装そのものではなく、現行の GHC で動くように移植したコードです。
+
+* https://github.com/7shi/zenn/tree/main/check/20260731-haskell-io-history
 
 :::message
 関数名も Report では各例とも `main` でしたが、`figure3`・`figure4`・`figure4op`・`figureDo`・`figure6` のように改名しています。現行の GHC で `runghc` するには `main :: IO ()` という名前のエントリポイントが別途必要で、Report のコードをそのまま `main` にすると衝突するためです。
@@ -44,14 +38,24 @@ Haskell 委員会は言語を純粋に保つと決めていたため、I/O の�
 |方式|型|採否|
 |---|---|---|
 |ストリーム|`[Response] -> [Request]`|Haskell 1.0 で採用（プリミティブ）|
-|継続 I/O|`FailCont -> StrCont -> Behaviour`|Haskell 1.0 で採用（ストリームの上に定義）|
+|継続|`FailCont -> StrCont -> Behaviour`|Haskell 1.0 で採用（ストリームの上に実装）|
 |世界渡し|`World -> (a, World)`|却下|
 
-ストリームと継続 I/O はどちらも採用されました。両者は相互に定義可能だと分かっていたためです。
+:::message
+一般的な「ストリーム」「継続」と区別するため、以降ではこれらの実装方式を「遅延ストリーム」「継続 I/O」と呼びます。
+:::
 
-ストリームは効率のためにプリミティブとして採用されましたが、n 番目の要求と n 番目の応答が対応しているという前提を型が守ってくれないため、遅延パターン `~` の付け忘れひとつで簡単に壊れる危険な書き方でした。そのためプログラマが実際に書くには、継続 I/O の方が好まれました。この継続 I/O は後に継続モナドにつながり、`do` 記法によって書きやすくなる、というのがこの記事全体の道のりです。
+遅延ストリームと継続 I/O はどちらも採用されました。両者は相互に定義可能だと分かっていたためです。
 
-# ストリーム I/O
+遅延ストリームは n 番目の要求と n 番目の応答が対応しているという前提を型が守ってくれないため、遅延パターン `~` の付け忘れひとつで簡単に壊れる危険な書き方でした。そのため実際に書くには、継続 I/O の方が好まれました。
+
+## なぜ遅延ストリームがプリミティブだったのか
+
+継続 I/O の方が使いやすいと考えられていたのに、Haskell 1.0 は遅延ストリームをプリミティブとして、継続 I/O をその上に実装しました。理由は効率です。
+
+逆向き（継続 I/O をプリミティブとして遅延ストリームを定義する）も可能でしたが、要求数に対して期待される線形時間になりませんでした。
+
+# 遅延ストリーム
 
 プログラムそのものが「応答の列を受け取って要求の列を返す関数」になります。
 
@@ -78,7 +82,7 @@ data Response
 プログラムが要求を出し、OS が応答を返します。遅延評価のおかげで、応答を処理する前に要求を出せるのが前提です。
 
 :::message
-要求と応答の列が遅延評価によって少しずつ伸びていくため、この方式は**遅延ストリーム**とも呼ばれます。
+要求と応答の列が遅延評価によって少しずつ伸びていくことが、「遅延ストリーム」という名称の由来です。
 :::
 
 ## OS の側
@@ -172,7 +176,7 @@ Hello, stream I/O!
 この受け取り方が遅延パターンでなければならない理由は、`run` の相互再帰にあります。引数の `~` は**遅延パターン**です。通常のパターンマッチは引数が渡された時点で構造を確かめますが、`~` を付けるとマッチが先送りされ、束縛した変数（`userInput` や `r4`）を実際に使う瞬間まで応答を覗きません。
 
 :::message
-遅延パターンは当時だけの記法ではなく、現在も Haskell の標準機能です。上のコードは `Behaviour` などの型定義さえ用意すれば、現行の GHC でそのまま通ります。
+遅延パターンは、現在も Haskell の標準機能です。上のコードは `Behaviour` などの型定義さえ用意すれば、現行の GHC でそのまま通ります。
 :::
 
 ```hs:Haskell10.hs
@@ -204,10 +208,10 @@ main =
   → 例外: <<timeout>>
 ```
 
-n 番目の要求と n 番目の応答が対応しているという前提を、プログラマが遅延パターンで守る必要があります。順序の正しさは型では守られておらず、`~` の付け忘れひとつで簡単に壊れます。論文はストリームの読みにくさをこう説明しています。
+n 番目の要求と n 番目の応答が対応しているという前提を、プログラマが遅延パターンで守る必要があります。順序の正しさは型では守られておらず、`~` の付け忘れひとつで簡単に壊れます。論文は遅延ストリームの読みにくさをこう説明しています。
 
 > the pattern matching required by stream-based I/O forces the reader's focus to jump back and forth between the patterns (representing the responses) and the requests.
-> （ストリームベースの I/O が要求するパターンマッチは、応答を表すパターンと要求との間で読者の視点を行き来させる）
+> （遅延ストリームベースの I/O が要求するパターンマッチは、応答を表すパターンと要求との間で読者の視点を行き来させる）
 
 # 継続 I/O
 
@@ -266,7 +270,7 @@ Hello, continuation I/O!
 
 `letE x k = k x` という補助関数が使われているのは、Haskell 1.0 には `let` 式がなかったためです（1.1 で入りました）。
 
-制御の流れが局所的になり、多くのプログラマには継続 I/O が好まれました。一方でラムダが入れ子になるにつれて括弧が積み上がります。
+制御の流れが局所的になり使いやすくなりましたが、ラムダが入れ子になるにつれて括弧が積み上がります。
 
 ## 括弧を減らす
 
@@ -301,11 +305,11 @@ Hello, continuation I/O!
 f >>> x = f abort x
 ```
 
-`>>=` に見えて来ますが、これは IO モナドの 6 年前の話です。
+`>>=` (bind) の手前まで来ているように見えます。
 
 # 継続 I/O と継続モナド
 
-論文は `>>>` 版について「モナドのコードと驚くほど似ている」と述べた上で、こう続けます。
+論文は `>>>` について「モナドのコードと驚くほど似ている」と述べた上で、こう続けます。
 
 > it was really the advent of do-notation—not monads themselves—that made Haskell programs look more like conventional imperative programs
 > （Haskell のプログラムを従来の命令型プログラムのように見せたのは、モナドそれ自体ではなく、実は do 記法の登場だった）
@@ -313,7 +317,7 @@ f >>> x = f abort x
 そして次の問いを残しています。
 
 > In retrospect it is worth asking whether this same (or similar) syntactic device could have been used to make stream or continuation-based I/O look more natural.
-> （振り返ってみると、これと同じ（あるいは似た）構文上の仕掛けを、ストリームや継続ベースの I/O をより自然に見せるために使えたのではないかと問う価値がある）
+> （振り返ってみると、これと同じ（あるいは似た）構文上の仕掛けを、遅延ストリームや継続ベースの I/O をより自然に見せるために使えたのではないかと問う価値がある）
 
 :::message
 Haskell 1.0 当時の視点ではなく、2007 年に書かれた論文が振り返って述べている視点です。
@@ -354,9 +358,7 @@ evalIO m = runCont m (\_ -> done)
 ```hs:figureDo.hs
 instance Monad (Cont r) where
     m >>= k = Cont $ \c -> runCont m (\x -> runCont (k x) c)
-```
 
-```hs:figureDo.hs
 figureDo :: Behaviour
 figureDo = evalIO $ do
     appendChanC stdout "enter filename\n"
@@ -376,23 +378,13 @@ hello.txt
 Hello, continuation I/O!
 ```
 
-:::message
-継続モナドの答えの型 `r` は抽象的で掴みにくいですが、ここでは `r` が `Behaviour`、すなわちこれから OS に出す要求の列という具体物になっています。
-:::
-
-入れ子のラムダ版・`>>>` 版・この `do` 版の 3 つで、実行結果は完全に一致します。
+入れ子のラムダ・`>>>`・`do` の 3 つで、実行結果は完全に一致します。
 
 Haskell 1.0 の継続 I/O は、継続モナドを `newtype` で包まずに素で使っていたものだと言えます。論文も、IO モナドが継続で実装できることを次の型で示しています。
 
 ```hs
 type IO a = FailCont -> SuccCont a -> Behaviour
 ```
-
-# なぜストリームがプリミティブだったのか
-
-継続 I/O の方が使いやすいと考えられていたのに、Haskell 1.0 はストリームをプリミティブとして、継続 I/O をその上に定義しました。理由は効率です。
-
-逆向き（継続 I/O をプリミティブとしてストリームを定義する）も可能でしたが、要求数に対して線形の空間と二次の時間がかかり、期待される定数空間・線形時間になりませんでした。
 
 # 却下された世界渡し
 
@@ -498,7 +490,7 @@ https://qiita.com/7shi/items/ab3b819871d7b0710949
 
 # IO モナド
 
-1989 年に Moggi が圏論のモナドで言語機能を記述する論文を出し、Wadler がそれをプログラムの構造化に使えると見抜きました。Haskell 1.3（1996 年）で I/O はモナドになり、ストリームと継続 I/O の両方を置き換えました。
+1989 年に Moggi が圏論のモナドで言語機能を記述する論文を出し、Wadler がそれをプログラムの構造化に使えると見抜きました。Haskell 1.3（1996 年）で I/O はモナドになり、遅延ストリームと継続 I/O の両方を置き換えました。
 
 ```hs:figure6.hs
 figure6 :: IO ()
@@ -586,7 +578,7 @@ https://qiita.com/7shi/items/a2bb35f27cd4a56f7bac
 
 async/await が言語に入る前は、ジェネレーターで同じことが実装されていました（`co` ライブラリなど）。
 
-`[Response] -> [Request]` という Haskell 1.0 の型は、まさに双方向のコルーチンを 2 本の遅延リストで表したものです。実際、「ストリーム I/O」の節で見た Figure 3 のプログラムをコルーチンとして書き直すと、型がそのまま `Behaviour` に一致し、そこで定義した `run`（`os`）にそのまま渡せます。
+`[Response] -> [Request]` という Haskell 1.0 の型は、まさに双方向のコルーチンを 2 本の遅延リストで表したものです。実際、「遅延ストリーム I/O」の節で見た Figure 3 のプログラムをコルーチンとして書き直すと、型がそのまま `Behaviour` に一致し、そこで定義した `run`（`os`）にそのまま渡せます。
 
 ```hs:GenBehaviour.hs
 feed :: Gen i o -> [i] -> [o]
@@ -602,18 +594,8 @@ main = run fs "hello.txt\n" (feed prog)
 
 # まとめ
 
-* IO モナドの前、Haskell 1.0（1990）はストリームと継続 I/O の 2 方式を載せていた。ストリームをプリミティブとした理由は効率。
-* ストリームは `[Response] -> [Request]`。遅延評価に依存し、順序の正しさは遅延パターン `~` で守るしかなかった。
+* IO モナドの前、Haskell 1.0（1990）は遅延ストリームと継続 I/O の 2 方式を載せていた。遅延ストリームをプリミティブとした理由は効率。
+* 遅延ストリームは `[Response] -> [Request]`。遅延評価に依存し、順序の正しさは遅延パターン `~` で守るしかなかった。
 * 継続 I/O の `readFile name abort` は `(String -> Behaviour) -> Behaviour` で、継続モナドそのもの。`Cont` で包めば `do` 記法になり、モナド版と同形になる。
 * 世界渡しは単一スレッド性を保証できず却下された。Clean は同じ方式を一意型で型付けして成立させ、Haskell はモナドで隠して成立させた。現在の GHC の IO はこの方式を `newtype` で隠したものである。
 * 同じ問題と同じ解決が、Node.js のコールバックから async/await への流れとして繰り返された。
-
-# 参考
-
-本記事の典拠、7 節が I/O の経緯
-
-* [A History of Haskell: Being Lazy with Class](https://www.microsoft.com/en-us/research/publication/a-history-of-haskell-being-lazy-with-class/)
-
-IO モナドの入門的な解説
-
-* [Tackling the Awkward Squad](https://www.microsoft.com/en-us/research/publication/tackling-awkward-squad-monadic-inputoutput-concurrency-exceptions-foreign-language-calls-haskell/) (Peyton Jones, 2001)
