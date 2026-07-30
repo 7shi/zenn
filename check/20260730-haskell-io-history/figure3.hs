@@ -10,7 +10,7 @@ figure3 :: Behaviour
 figure3 ~(Success : ~(Str userInput : ~(Success : ~(r4 : _)))) =
     [ AppendChan stdout "enter filename\n"
     , ReadChan stdin
-    , AppendChan stdout name
+    , AppendChan stdout (name ++ "\n")
     , ReadFile name
     , AppendChan stdout
         (case r4 of
@@ -25,7 +25,7 @@ figure3Strict :: Behaviour
 figure3Strict (Success : Str userInput : Success : r4 : _) =
     [ AppendChan stdout "enter filename\n"
     , ReadChan stdin
-    , AppendChan stdout name
+    , AppendChan stdout (name ++ "\n")
     , ReadFile name
     , AppendChan stdout
         (case r4 of

@@ -8,15 +8,18 @@ GHC 9.6.6。実行は `runghc {ファイル名}`。
 | ファイル | 内容 |
 |---|---|
 | `Haskell10.hs` | `Request`/`Response`/`Behaviour` と OS シミュレーター（共通モジュール） |
-| `StreamIO.hs` | Haskell 1.0 Report の Figure 3「Stream-based I/O」 |
-| `ContIO.hs` | 同 Figure 4「Continuation I/O」＋ それを `Cont` で包む |
-| `Monadic.hs` | 同 Figure 6「Monadic I/O」を現行の Haskell へ移植 |
+| `figure3.hs` | Haskell 1.0 Report の Figure 3「Stream-based I/O」 |
+| `Transaction.hs` | Figure 4 のトランザクション定義（共通モジュール） |
+| `figure4.hs` | 同 Figure 4「Continuation I/O」（入れ子のラムダ版） |
+| `figure4op.hs` | 同 Figure 4 を `>>>` 演算子で平らにした版 |
+| `figureDo.hs` | Figure 4 を `Cont` で包んで `do` 記法にした版 |
+| `figure6.hs` | 同 Figure 6「Monadic I/O」を現行の Haskell へ移植 |
 | `WorldPassing.hs` | 却下された第 3 案「世界渡し」と、単一スレッド性が破れる様子 |
 | `WorldGHC.hs` | 現行 GHC の `IO` を剥がして世界渡しを直接書く（`UnboxedTuples`） |
 | `GenBehaviour.hs` | 双方向ジェネレーターが `Behaviour` そのものであることの確認 |
 
-`Monadic.hs` だけは実ファイルを読むので `hello.txt` を使う
-（標準入力にファイル名を与える: `echo hello.txt | runghc Monadic.hs`）。
+`figure6.hs` だけは実ファイルを読むので `hello.txt` を使う
+（標準入力にファイル名を与える: `echo hello.txt | runghc figure6.hs`）。
 他は OS シミュレーター内の仮想ファイルシステムを使う。
 
 Report の `Response` は `Failure IOError`、`FailCont` は `IOError -> Behaviour` だが、
@@ -64,7 +67,8 @@ main ~(Success : ~(Str userInput : ~(Success : ~(r4 : _)))) =
 
 ```
 enter filename
-hello.txtHello, stream I/O!
+hello.txt
+Hello, stream I/O!
 ```
 
 `~` を外すと、要求を 1 つも出さないうちに応答を見ようとして自分を待つ。
@@ -112,7 +116,7 @@ figureDo = evalIO $ do
     appendChanC stdout "enter filename\n"
     userInput <- readChanC stdin
     let (name : _) = lines userInput
-    appendChanC stdout name
+    appendChanC stdout (name ++ "\n")
     contents <- readFileC name
     appendChanC stdout contents
 ```
@@ -146,7 +150,8 @@ Haskell 1.0 の OS シミュレーターに差したら**そのまま動いた**
 ```
 === ジェネレーターを Behaviour として OS に差す ===
 enter filename
-hello.txtHello, coroutine!
+hello.txt
+Hello, coroutine!
 ```
 
 つまり `[Response] -> [Request]` は**双方向コルーチンを 2 本の遅延リストで
@@ -229,7 +234,7 @@ main = IO $ \world ->
 Clean の `#` による受け渡しと同じ形。Haskell は一意型を持たない代わりに
 `newtype` による抽象化で一意性を守っている。
 
-### Figure 6 は現行の Haskell でそのまま動く（`Monadic.hs`）
+### Figure 6 は現行の Haskell でそのまま動く（`figure6.hs`）
 
 `appendChan`/`readChan` を `hPutStr`/`hGetContents` に置き換えるだけ。
 ストリーム版・継続版・`Cont` 版・モナド版の 4 つで実行結果が一致した。

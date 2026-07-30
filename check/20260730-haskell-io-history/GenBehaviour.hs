@@ -65,7 +65,7 @@ prog = runGen $ \ccOut -> do
     r2 <- yield ccOut (ReadChan stdin)
     let userInput = case r2 of Str s -> s; _ -> ""
         (name : _) = lines userInput
-    _ <- yield ccOut (AppendChan stdout name)
+    _ <- yield ccOut (AppendChan stdout (name ++ "\n"))
     r4 <- yield ccOut (ReadFile name)
     yield ccOut $
         AppendChan stdout $ case r4 of

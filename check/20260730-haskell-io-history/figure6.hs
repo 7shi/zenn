@@ -19,7 +19,7 @@ figure6 = do
     appendChan stdout "enter filename\n"
     userInput <- readChan stdin
     let (name : _) = lines userInput
-    appendChan stdout name
+    appendChan stdout (name ++ "\n")
     catch
         ( do
             contents <- readFile name
