@@ -242,19 +242,12 @@ readFileT name fail_ succ_ ~(resp : resps) =
 ```hs:figure4.hs
 figure4 :: Behaviour
 figure4 =
-    appendChanT stdout "enter filename\n" abort
-        ( readChanT stdin abort
-            ( \userInput ->
-                letE
-                    (lines userInput)
-                    ( \(name : _) ->
-                        appendChanT stdout (name ++ "\n") abort
-                            ( readFileT name fail_
-                                (\contents -> appendChanT stdout contents abort done)
-                            )
-                    )
-            )
-        )
+    appendChanT stdout "enter filename\n" abort (
+    readChanT stdin abort                       (\userInput ->
+    letE (lines userInput)                      (\(name : _) ->
+    appendChanT stdout (name ++ "\n") abort     (
+    readFileT name fail_                        (\contents ->
+    appendChanT stdout contents abort done)))))
   where
     fail_ _ = appendChanT stdout "can't open file\n" abort done
 
@@ -279,13 +272,12 @@ Hello, continuation I/O!
 ```hs:figure4op.hs
 figure4op :: Behaviour
 figure4op =
-    appendChanT stdout "enter filename\n"
-        >>> readChanT stdin
-        >>> \userInput ->
-            let (name : _) = lines userInput
-             in appendChanT stdout (name ++ "\n")
-                    >>> readFileT name fail_
-                        (\contents -> appendChanT stdout contents abort done)
+    appendChanT stdout "enter filename\n" >>>
+    readChanT stdin                       >>> \userInput ->
+    let (name : _) = lines userInput in
+    appendChanT stdout (name ++ "\n")     >>>
+    readFileT name fail_                     (\contents ->
+    appendChanT stdout contents abort done)
   where
     fail_ _ = appendChanT stdout "can't open file\n" abort done
 
@@ -329,7 +321,7 @@ Haskell 1.0 当時の視点ではなく、2007 年に書かれた論文が振り
 
 ```hs
 readFileT name abort :: StrCont -> Behaviour
-                     =  (String -> Behaviour) -> Behaviour
+--                   =  (String -> Behaviour) -> Behaviour
 ```
 
 `(a -> r) -> r` の形です。つまり継続モナドの中身そのものです。
@@ -406,11 +398,9 @@ bindW m k w = case m w of (x, w') -> k x w'
 ```hs:WorldPassing.hs
 greet :: IOw ()
 greet =
-    putStrLnW "enter filename"
-        `bindW` \_ ->
-            getLineW "hello.txt"
-                `bindW` \name ->
-                    putStrLnW ("you typed " ++ name)
+    putStrLnW "enter filename" `bindW` \_ ->
+    getLineW "hello.txt"       `bindW` \name ->
+    putStrLnW ("you typed " ++ name)
 
 -- 記事用の実行エントリポイント
 main :: IO ()
@@ -500,7 +490,7 @@ figure6 = do
     let (name : _) = lines userInput
     appendChan stdout (name ++ "\n")
     catch
-        ( do
+        (do
             contents <- readFile name
             appendChan stdout contents
         )
