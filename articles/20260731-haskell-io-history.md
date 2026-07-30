@@ -14,7 +14,7 @@ Haskell は副作用を IO モナドで扱います。そこに至るまでは�
 
 検証コードは以下に置きました。
 
-* [`check/20260730-haskell-io-history/`](https://github.com/7shi/zenn/tree/main/check/20260730-haskell-io-history)
+* [`check/20260731-haskell-io-history/`](https://github.com/7shi/zenn/tree/main/check/20260731-haskell-io-history)
 
 :::message
 本記事の執筆には Claude Code (Opus 5) を利用しました。
@@ -49,19 +49,19 @@ Haskell 委員会は言語を純粋に保つと決めていたため、I/O の�
 
 ストリームと継続 I/O はどちらも採用されました。両者は相互に定義可能だと分かっていたためです。
 
-ストリームは効率のためにプリミティブとして採用されましたが、n 番目の要求と n 番目の応答が対応しているという前提を型が守ってくれないため、遅延パターン `~` の付け忘れひとつで簡単に壊れる危険な書き方でした。そのためプログラマが実際に書くには、継続の方が好まれました。この継続 I/O は後に継続モナドにつながり、`do` 記法によって書きやすくなる、というのがこの記事全体の道のりです。
+ストリームは効率のためにプリミティブとして採用されましたが、n 番目の要求と n 番目の応答が対応しているという前提を型が守ってくれないため、遅延パターン `~` の付け忘れひとつで簡単に壊れる危険な書き方でした。そのためプログラマが実際に書くには、継続 I/O の方が好まれました。この継続 I/O は後に継続モナドにつながり、`do` 記法によって書きやすくなる、というのがこの記事全体の道のりです。
 
 # ストリーム I/O
 
 プログラムそのものが「応答の列を受け取って要求の列を返す関数」になります。
 
-```hs
+```hs:Haskell10.hs
 type Behaviour = [Response] -> [Request]
 ```
 
 要求と応答はデータ型です（一部を抜粋）。
 
-```hs
+```hs:Haskell10.hs
 data Request
     = ReadFile Name
     | ReadChan Name
@@ -91,7 +91,7 @@ Haskell 1.0 Report は付録で、OS を「初期状態と Haskell プログラ�
 
 以下はそのモデルをそのまま Haskell コードにしたものです。実行のたびにファイルや標準入力を読み直す代わりに、あらかじめ用意した固定のファイルシステムと入力文字列を引数として与えます。
 
-```hs
+```hs:Haskell10.hs
 os :: [(Name, String)] -> String -> [Request] -> [Response]
 os _ _ [] = []
 os fs input (r : rs) = case r of
@@ -110,7 +110,7 @@ os fs input (r : rs) = case r of
 
 プログラムと OS を互いに参照させて回します。
 
-```hs
+```hs:Haskell10.hs
 run :: [(Name, String)] -> String -> Behaviour -> IO ()
 run fs input behaviour = mapM_ emit reqs
   where
@@ -132,7 +132,7 @@ run fs input behaviour = mapM_ emit reqs
 
 Report の例です。ファイル名を促し、入力されたファイル名を表示し、その内容を出力します。
 
-```hs
+```hs:figure3.hs
 figure3 :: Behaviour
 figure3 ~(Success : ~(Str userInput : ~(Success : ~(r4 : _)))) =
     [ AppendChan stdout "enter filename\n"
@@ -175,7 +175,7 @@ Hello, stream I/O!
 遅延パターンは当時だけの記法ではなく、現在も Haskell の標準機能です。上のコードは `Behaviour` などの型定義さえ用意すれば、現行の GHC でそのまま通ります。
 :::
 
-```hs
+```hs:Haskell10.hs
 reqs = behaviour resps
 resps = os fs input reqs
 ```
@@ -188,10 +188,19 @@ resps = os fs input reqs
 
 `~` がないと、`figure3` は最初の引数（`resps` の先頭）の構造を確かめてからでないと戻り値のコンスセルすら作れません。しかし `resps` の先頭は `reqs` の先頭が要求として消費されて初めて生まれるものです。`reqs` の先頭は `figure3` の戻り値そのものなので、「`figure3` が値を返すには `resps` の先頭が要る」「`resps` の先頭が生まれるには `figure3` が値を返す必要がある」という堂々巡りになり、どちらも先に進めず止まります。
 
-実際に `~` を外して動かすと、この堂々巡りがそのままタイムアウトとして現れます。
+実際に `~` を外して動かすと、この堂々巡りによってタイムアウトとなります。
 
+```hs:figure3.hs
+-- 記事用の実行エントリポイント
+main :: IO ()
+main =
+    r <- timeout 1000000 $ try (run fs "hello.txt\n" figure3Strict)
+    case r of
+        Nothing -> putStrLn "  → タイムアウト（自分の出力を待って止まった）"
+        Just (Left e) -> putStrLn ("  → 例外: " ++ show (e :: SomeException))
+        Just (Right ()) -> putStrLn "  → 完走した"
+```
 ```text:実行結果
-=== Figure 3: 遅延パターンなし（~ を外す） ===
   → 例外: <<timeout>>
 ```
 
@@ -212,7 +221,7 @@ type StrCont = String -> Behaviour
 
 `ReadFile` という要求（コンストラクタ）に `readFileT` というトランザクション（関数）が対応します。この要求は失敗と成功の 2 つの応答を持つので、継続も 2 つ受け取ります。
 
-```hs
+```hs:Transaction.hs
 readFileT :: Name -> FailCont -> StrCont -> Behaviour
 readFileT name fail_ succ_ ~(resp : resps) =
     ReadFile name
@@ -226,7 +235,7 @@ readFileT name fail_ succ_ ~(resp : resps) =
 
 先ほどのプログラムはこうなります。
 
-```hs
+```hs:figure4.hs
 figure4 :: Behaviour
 figure4 =
     appendChanT stdout "enter filename\n" abort
@@ -263,7 +272,7 @@ Hello, continuation I/O!
 
 この書き方が一般的になると見て、委員会は設計の終盤に中置演算子の文脈におけるラムダの優先順位を変更しました。これで次のように書けます。
 
-```hs
+```hs:figure4op.hs
 figure4op :: Behaviour
 figure4op =
     appendChanT stdout "enter filename\n"
@@ -288,15 +297,31 @@ Hello, continuation I/O!
 
 演算子の定義は失敗継続を `abort` に固定するだけです。
 
-```hs
+```hs:figure4op.hs
 f >>> x = f abort x
 ```
 
 `>>=` に見えて来ますが、これは IO モナドの 6 年前の話です。
 
-# 継続 I/O は継続モナドだった
+# 継続 I/O と継続モナド
 
-ここが本題です。`readFileT` の失敗継続を `abort` に固定して部分適用すると、型はこうなります。
+論文は `>>>` 版について「モナドのコードと驚くほど似ている」と述べた上で、こう続けます。
+
+> it was really the advent of do-notation—not monads themselves—that made Haskell programs look more like conventional imperative programs
+> （Haskell のプログラムを従来の命令型プログラムのように見せたのは、モナドそれ自体ではなく、実は do 記法の登場だった）
+
+そして次の問いを残しています。
+
+> In retrospect it is worth asking whether this same (or similar) syntactic device could have been used to make stream or continuation-based I/O look more natural.
+> （振り返ってみると、これと同じ（あるいは似た）構文上の仕掛けを、ストリームや継続ベースの I/O をより自然に見せるために使えたのではないかと問う価値がある）
+
+:::message
+Haskell 1.0 当時の視点ではなく、2007 年に書かれた論文が振り返って述べている視点です。
+:::
+
+## 継続モナドとして見る
+
+まず、継続 I/O がすでに継続モナドの形をしていることを確認します。`readFileT` の失敗継続を `abort` に固定して部分適用すると、型はこうなります。
 
 ```hs
 readFileT name abort :: StrCont -> Behaviour
@@ -305,13 +330,13 @@ readFileT name abort :: StrCont -> Behaviour
 
 `(a -> r) -> r` の形です。つまり継続モナドの中身そのものです。
 
-```hs
+```hs:figureDo.hs
 newtype Cont r a = Cont {runCont :: (a -> r) -> r}
 ```
 
 包んでみます。
 
-```hs
+```hs:figureDo.hs
 readFileC :: Name -> Cont Behaviour String
 readFileC name = Cont (readFileT name abort)
 
@@ -322,14 +347,16 @@ evalIO :: Cont Behaviour () -> Behaviour
 evalIO m = runCont m (\_ -> done)
 ```
 
-`Monad` インスタンスを与えれば `do` 記法で書けます。
+## do 記法で書き直す
 
-```hs
+`Cont` は `newtype` で包んだだけなので、`Monad` インスタンスを与えれば論文の問いにあった「同じ構文上の仕掛け」、つまり `do` 記法がそのまま使えます。
+
+```hs:figureDo.hs
 instance Monad (Cont r) where
     m >>= k = Cont $ \c -> runCont m (\x -> runCont (k x) c)
 ```
 
-```hs
+```hs:figureDo.hs
 figureDo :: Behaviour
 figureDo = evalIO $ do
     appendChanC stdout "enter filename\n"
@@ -349,33 +376,17 @@ hello.txt
 Hello, continuation I/O!
 ```
 
-入れ子のラムダ版・`>>>` 版・この `do` 版の 3 つで、実行結果は完全に一致します。
-
-Haskell 1.0 の継続 I/O は、継続モナドを `newtype` で包まずに素で使っていたものだと言えます。
-
 :::message
-継続モナドの答えの型 `r` は抽象的で掴みにくいところですが、ここでは `r` が `Behaviour`、すなわちこれから OS に出す要求の列という具体物になっています。
+継続モナドの答えの型 `r` は抽象的で掴みにくいですが、ここでは `r` が `Behaviour`、すなわちこれから OS に出す要求の列という具体物になっています。
 :::
 
-論文も、IO モナドが継続で実装できることを次の型で示しています。
+入れ子のラムダ版・`>>>` 版・この `do` 版の 3 つで、実行結果は完全に一致します。
+
+Haskell 1.0 の継続 I/O は、継続モナドを `newtype` で包まずに素で使っていたものだと言えます。論文も、IO モナドが継続で実装できることを次の型で示しています。
 
 ```hs
 type IO a = FailCont -> SuccCont a -> Behaviour
 ```
-
-## do 記法が効いていた
-
-論文は `>>>` 版について「モナド版のコードと驚くほど似ている」と述べた上で、こう続けます。
-
-> it was really the advent of do-notation—not monads themselves—that made Haskell programs look more like conventional imperative programs
-> （Haskell のプログラムを従来の命令型プログラムのように見せたのは、モナドそれ自体ではなく、実は do 記法の登場だった）
-
-そして次の問いを残しています。
-
-> In retrospect it is worth asking whether this same (or similar) syntactic device could have been used to make stream or continuation-based I/O look more natural.
-> （振り返ってみると、これと同じ（あるいは似た）構文上の仕掛けを、ストリームや継続ベースの I/O をより自然に見せるために使えたのではないかと問う価値がある）
-
-上で `do` 記法にしてみたものが、まさにその答えに当たります。
 
 # なぜストリームがプリミティブだったのか
 
@@ -387,20 +398,20 @@ type IO a = FailCont -> SuccCont a -> Behaviour
 
 「世界の状態を受け渡して更新する」方式も検討されました。純粋関数型言語で他のデータ構造を扱うのと同じように、世界も引数と戻り値で回すという発想です。
 
-```hs
+```hs:WorldPassing.hs
 type IOw a = World -> (a, World)
 ```
 
 `bind` に相当するものは状態を繋ぐだけです。
 
-```hs
+```hs:WorldPassing.hs
 bindW :: IOw a -> (a -> IOw b) -> IOw b
 bindW m k w = case m w of (x, w') -> k x w'
 ```
 
 素直に使えば命令型のように書けます。
 
-```hs
+```hs:WorldPassing.hs
 greet :: IOw ()
 greet =
     putStrLnW "enter filename"
@@ -408,41 +419,53 @@ greet =
             getLineW "hello.txt"
                 `bindW` \name ->
                     putStrLnW ("you typed " ++ name)
+
+-- 記事用の実行エントリポイント
+main :: IO ()
+main = putStrLn ("  " ++ render (snd (runW greet)))
 ```
 ```text:実行結果
-=== 素直に使えば命令型のように書ける ===
   enter filename / you typed hello.txt
 ```
 
 却下された理由は、世界への単一スレッドなアクセスを保証する手段がなかったことです。実際に破ってみます。同じ世界を 2 回使うと、世界が分岐します。
 
-```hs
+```hs:WorldPassing.hs
 forked w =
     let (_, w1) = putStrLnW "branch A" w
         (_, w2) = putStrLnW "branch B" w  -- ← 同じ w を再利用
     in (w1, w2)
+
+-- 記事用の実行エントリポイント
+main :: IO ()
+main =
+    let (a, b) = forked (World ["common"])
+    putStrLn ("  branch1: " ++ render a)
+    putStrLn ("  branch2: " ++ render b)
 ```
 ```text:実行結果
-=== 同じ世界を 2 回使える（単一スレッド性が破れる） ===
   branch1: common / branch A
   branch2: common / branch B
 ```
 
 古い世界を使い回せば、出力を巻き戻すこともできます。
 
-```hs
+```hs:WorldPassing.hs
 rewound =
     let (_, w1) = putStrLnW "first" (World [])
         (_, w2) = putStrLnW "second" w1
         (_, w3) = putStrLnW "third" w1    -- ← w2 を捨てて w1 から再開
     in seq w2 w3
+
+-- 記事用の実行エントリポイント
+main :: IO ()
+main = putStrLn ("  " ++ render rewound)
 ```
 ```text:実行結果
-=== 出力を巻き戻せる（second が消える） ===
   first / third
 ```
 
-型は何も文句を言いません。現実の世界は巻き戻せないので、これは意味を失っています。
+型エラーにはなりませんが、現実の世界は巻き戻せないので、これは意味を失っています。
 
 ## Clean の一意型
 
@@ -473,29 +496,11 @@ Haskell が「保証する手段がない」として却下したものを、Cle
 
 https://qiita.com/7shi/items/ab3b819871d7b0710949
 
-## IO モナドと世界渡し
-
-皮肉なことに、却下されたはずの世界渡しは現在の IO モナドの実装そのものです。`IO` を `newtype` で包んで外から触れなくすることで、単一スレッド性を型システムではなく抽象化によって守っています。剥がすと世界が現れます。
-
-```hs
-{-# LANGUAGE UnboxedTuples #-}
-import GHC.Base
-
-main = IO $ \world ->
-    let (# world1, _  #) = unIO (print "hello") world
-        (# world2, _  #) = unIO (print "world") world1
-    in  (# world2, () #)
-```
-
-`world` を手で受け渡す形は Clean の `#` と同じです（`WorldGHC.hs`）。Haskell は一意型を言語機能として持たない代わりに、一意性をモナドで守ったと言えます。
-
-https://qiita.com/7shi/items/0a90d7ba31355e1c73aa
-
 # IO モナド
 
 1989 年に Moggi が圏論のモナドで言語機能を記述する論文を出し、Wadler がそれをプログラムの構造化に使えると見抜きました。Haskell 1.3（1996 年）で I/O はモナドになり、ストリームと継続 I/O の両方を置き換えました。
 
-```hs
+```hs:figure6.hs
 figure6 :: IO ()
 figure6 = do
     appendChan stdout "enter filename\n"
@@ -530,6 +535,24 @@ Hello, stream I/O!
 
 3 番目が本質的だと論文は述べています。
 
+## IO モナドと世界渡し
+
+皮肉なことに、却下されたはずの世界渡しは現在の IO モナドの実装そのものです。`IO` を `newtype` で包んで外から触れなくすることで、単一スレッド性を型システムではなく抽象化によって守っています。剥がすと世界が現れます。
+
+```hs:WorldGHC.hs
+{-# LANGUAGE UnboxedTuples #-}
+import GHC.Base
+
+main = IO $ \world ->
+    let (# world1, _  #) = unIO (print "hello") world
+        (# world2, _  #) = unIO (print "world") world1
+    in  (# world2, () #)
+```
+
+`world` を手で受け渡す形は Clean の `#` と同じです（`WorldGHC.hs`）。Haskell は一意型を言語機能として持たない代わりに、一意性をモナドで守ったと言えます。
+
+https://qiita.com/7shi/items/0a90d7ba31355e1c73aa
+
 # 他言語の類似実装
 
 同じ問題が別の場所で繰り返されています。
@@ -542,44 +565,40 @@ Node.js の `readFile` はコールバックを取ります。
 fs.readFile(path, 'utf8', (err, data) => ...)
 ```
 
-`(err, data)` は、失敗継続と成功継続を 1 つのコールバックに畳んで先頭引数で見分けているだけです。分けて書くと Haskell 1.0 の `readFile` と同じ形になります。
+`(err, data)` は、失敗継続と成功継続を 1 つのコールバックに畳んで先頭引数で見分けているだけです。引数を分けて書けば Haskell 1.0 の `readFile` と同じ形になります。
 
 ```js
-const readFileT = path => (fail, succ) =>
+const readFileT = path => fail => succ =>
     fs.readFile(path, 'utf8', (err, data) => (err ? fail(err) : succ(data)));
 ```
 
-```hs
+```hs:Haskell 1.0 の型
 readFile :: Name -> FailCont -> StrCont -> Behaviour
 ```
 
-`path` を部分適用すれば `(cb) => void` で、`(a -> r) -> r` の形です。そしてネストすれば括弧が積み上がります。これは「コールバック地獄」として知られていますが、1990 年の Figure 4 で起きていたことと同じです。
+ネストによって括弧が積み上がります。これは「コールバック地獄」として知られていますが、1990 年の Figure 4 で起きていたことと同じです。
 
-解決の方向も同じでした。Promise を経て async/await に至る流れは、継続 I/O から `do` 記法への流れに対応します。
+解決の方向も同じでした。Promise を経て async/await に至る流れは、継続 I/O から `do` 記法への流れと重なります。
 
 https://qiita.com/7shi/items/a2bb35f27cd4a56f7bac
 
 ## ジェネレーターによる実装
 
-async/await が言語に入る前は、ジェネレーターとドライバーで同じことが実装されていました（`co` ライブラリなど）。ジェネレーターが「やってほしいこと」を `yield` し、ドライバーが実行して結果を `it.next(結果)` で渡して再開します。
+async/await が言語に入る前は、ジェネレーターで同じことが実装されていました（`co` ライブラリなど）。
 
-`[Response] -> [Request]` という Haskell 1.0 の型は、まさに双方向のコルーチンを 2 本の遅延リストで表したものです。実際、上のプログラムをコルーチンとして書き直すと、型がそのまま `Behaviour` に一致して OS に差せます（`GenBehaviour.hs`）。
+`[Response] -> [Request]` という Haskell 1.0 の型は、まさに双方向のコルーチンを 2 本の遅延リストで表したものです。実際、「ストリーム I/O」の節で見た Figure 3 のプログラムをコルーチンとして書き直すと、型がそのまま `Behaviour` に一致し、そこで定義した `run`（`os`）にそのまま渡せます。
 
-## Python の with
+```hs:GenBehaviour.hs
+feed :: Gen i o -> [i] -> [o]
+feed Done _ = []
+feed (Yield v next) is =
+    v : case is of
+        (i : rest) -> feed (evalCont (next i)) rest
+        [] -> []
 
-Python の `with` は `@contextmanager` によってジェネレーターで実装できます。`yield` の位置で `with` の本体が走ります。
-
-```python
-@contextmanager
-def res(name):
-    print(f"open  {name}")
-    try:
-        yield name        # ここで中断し、with の本体が走る
-    finally:
-        print(f"close {name}")
+main :: IO ()
+main = run fs "hello.txt\n" (feed prog)
 ```
-
-`with` の本体が継続です。Haskell では `ContT` を使うと同じことができます。
 
 # まとめ
 
@@ -588,12 +607,6 @@ def res(name):
 * 継続 I/O の `readFile name abort` は `(String -> Behaviour) -> Behaviour` で、継続モナドそのもの。`Cont` で包めば `do` 記法になり、モナド版と同形になる。
 * 世界渡しは単一スレッド性を保証できず却下された。Clean は同じ方式を一意型で型付けして成立させ、Haskell はモナドで隠して成立させた。現在の GHC の IO はこの方式を `newtype` で隠したものである。
 * 同じ問題と同じ解決が、Node.js のコールバックから async/await への流れとして繰り返された。
-
-「純粋なまま副作用を扱う」という問題に対して、リストで表すか継続で表すかという対立は Haskell が最初に通った道でした。
-
-# 関連記事
-
-https://qiita.com/7shi/items/27b6f3169961299a6195
 
 # 参考
 

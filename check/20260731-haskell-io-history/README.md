@@ -1,6 +1,6 @@
 # Haskell 1.0 のストリーム I/O と継続の関係（検証）
 
-記事 [`../../articles/20260730-haskell-io-history.md`](../../articles/20260730-haskell-io-history.md)
+記事 [`../../articles/20260731-haskell-io-history.md`](../../articles/20260731-haskell-io-history.md)
 （IOモナドに至るまでのHaskellのI/O）の検証コード。
 当時の I/O モデルを現行の GHC に移植して動かしたもの。
 GHC 9.6.6。実行は `runghc {ファイル名}`。
