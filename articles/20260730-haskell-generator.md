@@ -46,7 +46,19 @@ callCC f = Cont $ \c -> runCont (f (\x -> Cont $ \_ -> c x)) c
 ```
 
 :::message
-現在の GHC では `Monad` のスーパークラスである `Functor` と `Applicative` のインスタンスも必要です。`Control.Monad` から `liftM` と `ap` を import して `fmap = liftM`、`(<*>) = ap` と書けば済みます。
+現在の GHC では `Monad` のスーパークラスである `Functor` と `Applicative` のインスタンスも必要です。`Control.Monad` から `liftM` と `ap` を import して、`return` は `pure` に移します。
+
+```hs:現在の GHC 向け修正
+instance Functor (Cont r) where
+    fmap = liftM
+
+instance Applicative (Cont r) where
+    pure x = Cont ($ x)
+    (<*>)  = ap
+
+instance Monad (Cont r) where
+    m >>= k = Cont $ \c -> runCont m (\x -> runCont (k x) c)
+```
 
 標準の [`Control.Monad.Trans.Cont`](https://hackage.haskell.org/package/transformers-0.6.1.0/docs/Control-Monad-Trans-Cont.html) を使っても、以降の実装は同じように動きます。
 :::
