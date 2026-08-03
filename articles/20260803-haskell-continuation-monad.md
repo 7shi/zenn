@@ -708,7 +708,7 @@ openAll paths = forM paths $ \p -> ContT $ withFile p ReadMode
 
 main = evalContT $ do
     hs <- openAll ["a.txt", "b.txt", "c.txt"]
-    liftIO $ forM_ hs (\h -> hGetContents h >>= putStr)
+    liftIO $ forM_ hs $ \h -> hGetContents h >>= putStr
 ```
 
 :::message
