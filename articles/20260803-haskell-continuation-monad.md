@@ -113,14 +113,19 @@ m >>= k = k (runIdentity m)
 
 そこで、値の代わりに `k` の呼び出しを含む CPS の関数、つまり「継続に値を渡す関数」をモナドの中身にすることを考えます。`k` の呼び出しが関数の中に閉じ込められるため、それをどのように呼ぶかをコード側が制御できるようになります。これが継続モナド `Cont` です。
 
-```hs:型表記
-Cont r a
+```hs:定義（簡略化）
+newtype Cont r a = Cont { runCont :: (a -> r) -> r }
 ```
 
 * `r`: 最終的な結果の型
 * `a`: 継続モナドの中に含まれる値の型
+* `runCont`: 継続に値を渡す関数
 
 使用するには `Control.Monad.Trans.Cont` を import します。
+
+:::message
+実際のライブラリでは `Cont` は `newtype` ではなく `type Cont r a = ContT r Identity a` という型シノニムで、`runCont` も `Identity` の出し入れを含んだ形で定義されています。ここでは本質を見やすくするため、`Identity` を省いた形で説明します。実際の定義は後述の[ContT モナド変換子](#contt-モナド変換子)の節で扱います。
+:::
 
 ## runCont
 
@@ -626,8 +631,8 @@ fromList xs = runGen $ mapM_ yield xs
 
 ## ContT モナド変換子
 
-```hs:型表記
-ContT r m a
+```hs:定義
+newtype ContT r m a = ContT { runContT :: (a -> m r) -> m r }
 ```
 
 `Cont r a` に対して `m` が増えています。`Cont` が持っていた関数 `(a -> r) -> r` は、`m` が挟まって `(a -> m r) -> m r` になります。出し入れする関数も `T` が付いた版を使います。
