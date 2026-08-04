@@ -643,7 +643,7 @@ newtype ContT r m a = ContT { runContT :: (a -> m r) -> m r }
 | `cont` | `ContT` | `((a -> m r) -> m r) -> ContT r m a` |
 | `evalCont` | `evalContT` | `ContT r m r -> m r` |
 
-包むのは `cont` に相当する関数ではなく、`ContT` という構築子そのものです。また `evalCont` が継続に `id` を渡すのに対して、`evalContT` は `return` を渡します。
+包むのは `cont` に相当する関数ではなく、`ContT` というコンストラクタそのものです。また `evalCont` が継続に `id` を渡すのに対して、`evalContT` は `return` を渡します。
 
 `State` と `StateT` の関係と同じく、`m` に何もしない `Identity` を指定して変換子を無効化したものが `Cont` です。
 
@@ -653,7 +653,7 @@ type Cont r a = ContT r Identity a
 
 `m` に `IO` を指定した `ContT r IO` が、以下で使うモナドです。IO アクションは `liftIO` で持ち上げます。
 
-以下のコードは共通して次の import を前提とします。`ContT` を構築子として使うため `(..)` が必要です。
+以下のコードは共通して次の import を前提とします。`ContT` をコンストラクタとして使うため `(..)` が必要です。
 
 ```hs
 import Control.Monad.Trans.Cont (ContT (..), evalContT, callCC)
