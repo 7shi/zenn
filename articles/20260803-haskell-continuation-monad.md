@@ -27,11 +27,11 @@ Haskell ではモナドと呼ばれる部品を組み合わせてプログラム
 1. [Haskell 例外処理 超入門](http://qiita.com/7shi/items/73e534c47bbebc71b37e)
 1. [Haskell 構文解析 超入門](http://qiita.com/7shi/items/b8c741e78a96ea2c10fe)
 1. **Haskell 継続モナド 超入門** ← この記事
-1. 【予定】Haskell 型クラス 超入門
+1. [Haskell 型クラス 超入門](https://zenn.dev/7shi/articles/20260805-haskell-type-classes)
 1. 【予定】Haskell モナドとゆかいな仲間たち
-1. 【予定】Haskell Free モナド 超入門
-1. 【予定】Haskell Operational モナド 超入門
-1. 【予定】Haskell Eff モナド 超入門
+1. 【予定】Haskell Freeモナド 超入門
+1. 【予定】Haskell Operationalモナド 超入門
+1. 【予定】Haskell Effモナド 超入門
 1. 【予定】Haskell アロー 超入門
 
 # bind と継続
