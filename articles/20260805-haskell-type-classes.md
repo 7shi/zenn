@@ -2,7 +2,7 @@
 title: "Haskell 型クラス 超入門"
 emoji: "🧩"
 type: "tech" # tech: 技術記事 / idea: アイデア
-topics: ["haskell", "typeclass", "polymorphism"]
+topics: ["haskell", "型クラス", "polymorphism"]
 published: true
 ---
 
