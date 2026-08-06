@@ -74,7 +74,7 @@ Haskell の bind（`>>=`）も同じ構造を持っています。`m >>= k` の 
 
 IO モナドなら「次に実行するアクション」、Maybe モナドなら「値があったときに続ける処理」、リストモナドなら「各要素に対して行う処理」が継続にあたります。モナドの種類が変わっても `k` が継続だという構図は変わりません。
 
-bind が CPS の構造を持っていることを、最も単純なモナドである恒等モナド（`Identity`）で確認します。中に値が入っているだけのモナドです。👉[Haskell モナド変換子 超入門](https://qiita.com/7shi/items/4408b76624067c17e933)
+bind が CPS の構造を持っていることを、最も単純なモナドである恒等モナド（`Identity`）で確認します。中に値が入っているだけのモナドです。👉[モナド変換子](https://qiita.com/7shi/items/4408b76624067c17e933#identity%E3%83%A2%E3%83%8A%E3%83%89)
 
 ```hs
 import Control.Monad.Identity
@@ -89,7 +89,7 @@ main = print $ runIdentity calc
 6
 ```
 
-`do` 記法は `>>=` の連鎖の糖衣構文です。展開すれば次のようになります。👉[Haskell アクションとラムダ 超入門](https://qiita.com/7shi/items/4a8a2807bb5186576c61)
+`do` 記法は `>>=` の連鎖の糖衣構文です。展開すれば次のようになります。👉[アクションとラムダ](https://qiita.com/7shi/items/4a8a2807bb5186576c61#bind)
 
 ```hs
 calc =
@@ -319,7 +319,7 @@ sumUntilNegative xs = evalCont $ callCC $ \ret -> go ret 0 xs
 
 Python や JavaScript のジェネレーターは、`yield` で値を 1 つ返してその場で中断し、呼び出し元が次を要求したら中断した位置から再開します。中断して呼び出し元まで戻るところは `callCC` による脱出と同じで、後から再開できるところが、継続を値として保持できることに対応します。
 
-そのため中断のたびに、生成した値と、そこから再開するための継続を組にして呼び出し元へ渡します。もう値がないことも伝える必要があるため、「値と継続の組」か「終了」かの 2 択になります。これを直和型で表します。👉[Haskell 代数的データ型 超入門](http://qiita.com/7shi/items/1ce76bde464b4a55c143)
+そのため中断のたびに、生成した値と、そこから再開するための継続を組にして呼び出し元へ渡します。もう値がないことも伝える必要があるため、「値と継続の組」か「終了」かの 2 択になります。これを直和型で表します。👉[代数的データ型](https://qiita.com/7shi/items/1ce76bde464b4a55c143#%E7%9B%B4%E5%92%8C%E5%9E%8B)
 
 ```hs
 data Gen a = Yield a (Cont (Gen a) (Gen a)) | Done
@@ -627,7 +627,7 @@ fromList xs = runGen $ mapM_ yield xs
 
 ここまでは原理を通すことを優先してきましたが、継続モナドは実用でも使われています。ここで実用面を回収します。
 
-対象はファイルなどのリソースを扱う `withFile` で、IO が絡みます。ここまで使ってきた `Cont` のままでは IO を扱えないため、まず継続モナドのモナド変換子を導入します。👉[Haskell モナド変換子 超入門](https://qiita.com/7shi/items/4408b76624067c17e933)
+対象はファイルなどのリソースを扱う `withFile` で、IO が絡みます。ここまで使ってきた `Cont` のままでは IO を扱えないため、まず継続モナドのモナド変換子を導入します。👉[モナド変換子](https://qiita.com/7shi/items/4408b76624067c17e933#%E3%83%A2%E3%83%8A%E3%83%89%E5%A4%89%E6%8F%9B%E5%AD%90)
 
 ## ContT モナド変換子
 
@@ -712,7 +712,7 @@ main = evalContT $ do
 ```
 
 :::message
-`forM` と `forM_` の違いは、`forM` は結果をリストとして返すのに対し、`forM_` は結果を返さずにアクションだけを実行する点です。ここではハンドルのリストを取得するために `forM` を使っています。👉[Haskell アクションとラムダ 超入門](http://qiita.com/7shi/items/4a8a2807bb5186576c61)
+`forM` と `forM_` の違いは、`forM` は結果をリストとして返すのに対し、`forM_` は結果を返さずにアクションだけを実行する点です。ここではハンドルのリストを取得するために `forM` を使っています。👉[アクションとラムダ](https://qiita.com/7shi/items/4a8a2807bb5186576c61#form)
 :::
 
 ## 解放の順序と注意点
@@ -784,7 +784,7 @@ main = do
 ```
 
 :::message
-`hGetContents'` は base 4.15（GHC 9.0）以降で使えます。それより古い環境では、`evaluate` で式をその場で評価して読み切る必要があります。👉[Haskell 例外処理 超入門](https://qiita.com/7shi/items/73e534c47bbebc71b37e)
+`hGetContents'` は base 4.15（GHC 9.0）以降で使えます。それより古い環境では、`evaluate` で式をその場で評価して読み切る必要があります。👉[例外処理](https://qiita.com/7shi/items/73e534c47bbebc71b37e#evaluate)
 
 ```hs
 main = do
