@@ -29,7 +29,7 @@ Haskell ではモナドと呼ばれる部品を組み合わせてプログラム
 1. **Haskell 継続モナド 超入門** ← この記事
 1. [Haskell 型クラス 超入門](https://zenn.dev/7shi/articles/20260805-haskell-type-classes)
 1. [Haskell モナドとゆかいな仲間たち](https://zenn.dev/7shi/articles/20260807-haskell-monads-and-friends)
-1. 【予定】Haskell Freeモナド 超入門
+1. [Haskell Freeモナド 超入門](https://zenn.dev/7shi/articles/20260808-haskell-free-monad)
 1. 【予定】Haskell Operationalモナド 超入門
 1. 【予定】Haskell Effモナド 超入門
 1. 【予定】Haskell アロー 超入門
