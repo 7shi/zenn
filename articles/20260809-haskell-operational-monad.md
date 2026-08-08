@@ -81,9 +81,9 @@ instance Functor TeletypeF where
 続きがどこにも書かれていない命令は、それだけでは手順書になりません。そこで「命令と、その結果を受け取って続きを返す関数」の組を、手順書の型の側に持たせます。この形を **Operational モナド**と呼びます。
 
 :::message
-名前の由来は、操作的意味論（operational semantics）です。計算の意味を、実行する操作（命令）の並びとして記述する手法を、こう呼びます。命令を並べて手順書を組み立て、意味は後からインタープリターが与えるという今回の方式は、まさにこの発想です。`operational` パッケージの作者である Heinrich Apfelmus が、The Monad.Reader 誌のチュートリアル記事（2010 年）でこの方式を紹介しています。
+名前は、操作的意味論（operational semantics）に由来します。計算の意味を、実行する操作（命令）の並びとして記述する手法を指し、今回の方式はまさにこの発想に基づいています。
 
-なお、ほぼ同等の Freer モナドもあり、[後の節](#freer-%E3%83%A2%E3%83%8A%E3%83%89)で紹介します。
+なお、同等の方式は **Freer モナド**とも呼ばれます。Free が「モナド則だけを満たす自由な構造」だったのに対し、Freer は `Functor` インスタンスすら要求しない、より自由な構造（比較級）、という命名です。
 :::
 
 ```hs
@@ -409,13 +409,13 @@ runStack (x : xs) (Pop :>>= k)    = runStack xs (k x)
 
 ここまで `Program` を自分で定義してきましたが、実際には [operational](https://hackage.haskell.org/package/operational) パッケージを使います。[`Control.Monad.Operational`](https://hackage.haskell.org/package/operational/docs/Control-Monad-Operational.html) の `Program` は、本記事で書いたものと同じ発想の型です。
 
-ただし内部表現は同じではなく、コンストラクターも公開されていないので、直接パターンマッチすることはできません。
+ただし内部表現は同じではなく、コンストラクターも公開されていないので、`runIO` のように直接パターンマッチすることはできません。
 
 :::message
 コンストラクターが公開されていない、というのはモジュールのエクスポートの話です。Haskell では公開するものをモジュール名の後ろに列挙します。`module M (Program) where` のように型名だけを書くと、外からは型 `Program` は使えてもコンストラクターは見えません。両方公開するには `Program(..)` と書きます。`Data.Map` の `Map` などと同じで、内部表現を隠すことで、ライブラリ側が実装を変えても利用者のコードが壊れないようにします。
 :::
 
-代わりに、手順書を 1 段だけ剥がして `Return`・`:>>=` の形に整えて見せる関数 `view` が用意されています。
+代わりに、手順書を `Return`・`:>>=` の形に整えて見せる関数 `view` が用意されています。
 
 ```hs
 view :: Program instr a -> ProgramView instr a
@@ -475,8 +475,6 @@ stack script --resolver lts-22.28 --package operational ファイル名.hs
 ```
 :::
 
-パッケージ自体を実務で使う機会は多くありません。この手順書の表し方の実用面での価値は、Eff 系のエフェクトライブラリの土台になっていることにあります。
-
 ## 性能の注意
 
 自作した `Program` は、`>>=` を左結合で重ねると遅くなります。Free と同じ現象です。
@@ -504,40 +502,6 @@ stack script --resolver lts-22.28 --package operational ファイル名.hs
 
 Free は再帰的なデータ構造そのものなので、木として扱いたい場合に向いています。Operational は命令の列挙が楽なので、DSL を手早く作るのに向いています。どちらが優れているということではなく、用途の違いです。
 
-# Freer モナド
-
-続きを `>>=` の側に持たせるこの手順書の表し方は、**Freer モナド**とも呼ばれます。Free が「モナド則だけを満たす自由な構造」だったのに対し、Freer は `Functor` インスタンスすら要求しない、より自由な構造（比較級）、という命名です。
-
-Kiselyov と Ishii による 2015 年の論文で、拡張可能なエフェクト（extensible effects）の土台として使われました。Eff 系のライブラリはこの名前を使っているので、資料によっては Freer という呼び名で出てきます。
-
-- Kiselyov, O., & Ishii, H. (2015). Freer monads, more extensible effects. In Proceedings of the 2015 ACM SIGPLAN Symposium on Haskell (pp. 94–105). ACM. https://doi.org/10.1145/2804302.2804319
-
-論文での定義を見ると、コンストラクターの名前が違うだけで、本記事の `Program` と同じ構造です。
-
-```hs
-data Freer f a where
-    Pure   :: a -> Freer f a
-    Impure :: f b -> (b -> Freer f a) -> Freer f a
-```
-
-`Pure` が `Return`、`Impure` が `:>>=` に対応します。
-
-さらに論文では、続きの持ち方を変える工夫も示されています。この形を素朴に実装すると、「性能の注意」で見たとおり、左に積み上がった続きを後ろから 1 つ足すたびに先頭から辿り直すことになります。そこで続きを、関数 1 本ではなく、型の合う関数の列（キュー）として保持します。
-
-```hs
-data FTCQueue m a b where
-    Leaf :: (a -> m b) -> FTCQueue m a b
-    Node :: FTCQueue m a x -> FTCQueue m x b -> FTCQueue m a b
-```
-
-`Leaf` が続き 1 つ、`Node` が列の結合です。`Impure` が持つ続きをこのキューに変えると、`>>=` は関数の合成ではなく、末尾への追加で済みます。次の `|>` は「キューの末尾に追加する」操作を表す略記で、そのままではコンパイルできない擬似コードです。
-
-```hs
-Impure u q >>= k = Impure u (q |> k)   -- q の末尾に k を追加
-```
-
-積み上がった続きの合成が、平坦な 1 列に変わります（線形化）。剥がすときはキューの先頭から 1 つずつ取り出すので、左結合で積み上げても辿り直しは起きません。`freer-simple` などの Eff 系ライブラリは、このキューで性能上の問題を回避しています。`operational` が手順書を溜めておいて後から組み替えていたのに対し、こちらは続きを最初から 1 列に並べておく、という違いです。
-
 # まとめ
 
 Operational モナドは、続きを命令の型から外して `>>=` の側に持たせた手順書でした。（Freer モナドもほぼ同じものです）
@@ -556,3 +520,13 @@ Operational モナドは、続きを命令の型から外して `>>=` の側に�
 組み立てと解釈の分離という枠組みは前回のままで、インタープリターの書き方も変わりませんでした。変わったのは手順書の表し方だけです。命令を並べて手順書にし、意味はインタープリターが与えます。操作的意味論から取られた Operational という名前は、この分担そのものを指していました。
 
 手順書の中身を覗くには、`Show` を書いてもインタープリターを通す以外に方法がありませんでしたが、これは組み立てと解釈が分かれていることの裏返しでもあります。
+
+# 参考
+
+`operational` パッケージの作者である Heinrich Apfelmus 氏が、The Monad.Reader 誌のチュートリアル記事（2010 年）でこの方式を紹介しています。
+
+https://apfelmus.nfshost.com/articles/operational-monad.html
+
+Freer モナドは、拡張可能なエフェクト（extensible effects）の土台として使われています。
+
+- Kiselyov, O., & Ishii, H. (2015). Freer monads, more extensible effects. In Proceedings of the 2015 ACM SIGPLAN Symposium on Haskell (pp. 94–105). ACM. https://doi.org/10.1145/2804302.2804319
