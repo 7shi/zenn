@@ -6,7 +6,7 @@ topics: ["haskell", "モナド", "functor", "applicative"]
 published: true
 ---
 
-Haskell ではモナドと呼ばれる部品を組み合わせてプログラムを作ります。自作した型を `do` で使うには `Monad` 型クラスのインスタンスを実装する必要がありますが、そのためにはスーパークラスの `Functor` と `Applicative` の実装も求められます。この階層をたどってモナドを自作します。
+Haskell では、自作した型を `do` で使うには `Monad` 型クラスのインスタンスを実装する必要があり、そのためにスーパークラスの `Functor`・`Applicative` も求められます。この階層を順にたどってモナドを自作します。
 
 タイトルの「ゆかいな仲間たち」は、この `Functor` と `Applicative` を指しています。
 
