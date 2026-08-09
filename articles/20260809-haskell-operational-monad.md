@@ -471,7 +471,7 @@ interpretWithMonad :: Monad m => (forall a. instr a -> m a) -> Program instr b -
 `operational` は GHC に同梱されていないため、実行には導入が必要です。[Stack](https://docs.haskellstack.org/) を使う場合は次のように起動できます。
 
 ```
-stack script --resolver lts-22.28 --package operational ファイル名.hs
+stack script --resolver lts-24.53 --package operational ファイル名.hs
 ```
 :::
 
