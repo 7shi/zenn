@@ -31,7 +31,7 @@ Haskell では**型クラス**と呼ばれる仕組みにより、型ごとに�
 1. [Haskell モナドとゆかいな仲間たち](https://zenn.dev/7shi/articles/20260807-haskell-monads-and-friends)
 1. [Haskell Freeモナド 超入門](https://zenn.dev/7shi/articles/20260808-haskell-free-monad)
 1. [Haskell Operationalモナド 超入門](https://zenn.dev/7shi/articles/20260809-haskell-operational-monad)
-1. 【予定】Haskell Effモナド 超入門
+1. [Haskell Effモナド 超入門](https://zenn.dev/7shi/articles/20260811-haskell-eff-monad)
 1. 【予定】Haskell アロー 超入門
 
 # パラメトリック多相とアドホック多相
