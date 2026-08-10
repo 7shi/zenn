@@ -58,7 +58,7 @@ instance Functor f => Monad (Free f) where
     Free g >>= k = Free (fmap (>>= k) g)
 ```
 
-入出力を伴う命令では、継続が関数になりました。👉[Freeモナド](https://zenn.dev/7shi/articles/20260808-haskell-free-monad#%E3%83%86%E3%83%AC%E3%82%BF%E3%82%A4%E3%83%97)
+入出力を伴う命令では、継続が関数になりました。👉[Freeモナド](https://zenn.dev/7shi/articles/20260808-haskell-free-monad#テレタイプ)
 
 ```hs
 data TeletypeF next
@@ -99,7 +99,7 @@ data Program instr a where
 
 演算子をコンストラクターの名前にするときは、`:` で始める決まりがあります。`>>=` に似せた `:>>=` にしたのは、この組が bind そのものを表しているからです。以降、`:` の有無でコンストラクターの `:>>=` とメソッドの `>>=` を見分けてください。
 
-命令の型 `instr` は `* -> *` の種を持つ型引数で、前回の `Free` の `f` と同じ位置づけです。👉[Freeモナド](https://zenn.dev/7shi/articles/20260808-haskell-free-monad#%E7%A8%AE)
+命令の型 `instr` は `* -> *` の種を持つ型引数で、前回の `Free` の `f` と同じ位置づけです。👉[Freeモナド](https://zenn.dev/7shi/articles/20260808-haskell-free-monad#種)
 
 命令の結果の型 `b` は、手順書全体の型 `a` には現れません。途中の命令が何を返すかは、外からは見えないようになっています。このように型全体からは見えない型変数を含む型を**存在型**（existential type）と呼びます。この `b` が、GADT で書く理由です。普通の `data` では宣言の先頭に置いた型引数しか使えないので、戻り値の型に現れない `b` を持つコンストラクターは書けません。
 
@@ -113,7 +113,7 @@ GADT は拡張構文なので、このままではコンパイルが通りませ
 これまでのコードは GHC2021 という既定の拡張セットだけで動いていましたが、GADTs はそこに含まれていません。前回の `DeriveFunctor` は「手書きでも書けるものを楽にする」便利のための拡張でしたが、GADTs は「それがないと表現できない型」を可能にする拡張です。書かなくて済むものではないので、明示が要ります。
 :::
 
-この型に 3 段を揃えます。`Functor`・`Applicative` は定型です。👉[モナドとゆかいな仲間たち](https://zenn.dev/7shi/articles/20260807-haskell-monads-and-friends#3-%E6%AE%B5%E3%81%BE%E3%81%A8%E3%82%81%E3%81%A6%E6%9B%B8%E3%81%8F%E5%AE%9A%E5%9E%8B)
+この型に 3 段を揃えます。`Functor`・`Applicative` は定型です。👉[モナドとゆかいな仲間たち](https://zenn.dev/7shi/articles/20260807-haskell-monads-and-friends#3-段まとめて書く定型)
 
 ```hs
 import Control.Monad (liftM, ap)
@@ -137,7 +137,7 @@ instance Monad (Program instr) where
 `Return` の行は Free と同じです。`:>>=` の行を読み解きます。「命令 `i` の結果を `j` に渡して得られた手順書に、さらに `k` を続ける」のを、「命令 `i` の結果を、『`j` に渡してさらに `k` を続ける関数』に渡す」に書き換えています。継続の関数を合成しているだけです。
 
 :::message
-この書き換えは、モナド則の結合法則と同じ形です。👉[モナドとゆかいな仲間たち](https://zenn.dev/7shi/articles/20260807-haskell-monads-and-friends#%E3%83%A2%E3%83%8A%E3%83%89%E5%89%87)
+この書き換えは、モナド則の結合法則と同じ形です。👉[モナドとゆかいな仲間たち](https://zenn.dev/7shi/articles/20260807-haskell-monads-and-friends#モナド則)
 
 ```hs
 (m  >>= f) >>= g == m  >>= (\x -> f x >>= g)  -- モナド則の結合法則
@@ -156,7 +156,7 @@ Free g     >>= k = Free (fmap (>>= k) g)      -- Free
 
 Free は枝の中に継続があるので `fmap` で辿る必要がありました。Program は継続が最初から関数の中にあるので、辿る対象がありません。`fmap` が消え、命令の型への `Functor` 要求がなくなりました。
 
-「結果を受け取って継続を返す関数」を持ち回るのは、継続渡しスタイルと同じ形です。👉[継続モナド](https://zenn.dev/7shi/articles/20260803-haskell-continuation-monad#bind-%E3%81%A8-cps)
+「結果を受け取って継続を返す関数」を持ち回るのは、継続渡しスタイルと同じ形です。👉[継続モナド](https://zenn.dev/7shi/articles/20260803-haskell-continuation-monad#bind-と-cps)
 
 命令 1 つだけの手順書を作る関数も用意します。Free の `liftF` に相当します。
 
@@ -189,7 +189,7 @@ data TeletypeI a where
 GADT の「一般化」は、普通の `data` では `TeletypeI a` に揃うしかなかった戻り値の型を、コンストラクターごとに決められることを指します。`Program` では `b` を隠すために GADT を使いましたが、こちらは名前どおりの使い方です。同じ拡張が 2 通りに効いています。
 :::
 
-前回は「継続が値の命令では置いた値が結果になり、継続が関数の命令では置いた関数の戻り値が結果になる」という対応を、スマートコンストラクターの中で自分で作っていました。今度はその対応が、命令の型の宣言そのものになっています。👉[Freeモナド](https://zenn.dev/7shi/articles/20260808-haskell-free-monad#%E3%82%B9%E3%83%9E%E3%83%BC%E3%83%88%E3%82%B3%E3%83%B3%E3%82%B9%E3%83%88%E3%83%A9%E3%82%AF%E3%82%BF%E3%83%BC)
+前回は「継続が値の命令では置いた値が結果になり、継続が関数の命令では置いた関数の戻り値が結果になる」という対応を、スマートコンストラクターの中で自分で作っていました。今度はその対応が、命令の型の宣言そのものになっています。👉[Freeモナド](https://zenn.dev/7shi/articles/20260808-haskell-free-monad#スマートコンストラクター)
 
 スマートコンストラクターは `singleton` を使って書きます。
 
@@ -219,7 +219,7 @@ greet = do
 
 ## インタープリター
 
-組み立てた手順書を 1 段ずつ剥がして辿ります。まずは入力をリストで与えて出力をリストで集めるもので、入力が尽きたら空文字列を返します。前回と同じ形です。👉[Freeモナド](https://zenn.dev/7shi/articles/20260808-haskell-free-monad#%E3%82%A4%E3%83%B3%E3%82%BF%E3%83%BC%E3%83%97%E3%83%AA%E3%82%BF%E3%83%BC)
+組み立てた手順書を 1 段ずつ剥がして辿ります。まずは入力をリストで与えて出力をリストで集めるもので、入力が尽きたら空文字列を返します。前回と同じ形です。👉[Freeモナド](https://zenn.dev/7shi/articles/20260808-haskell-free-monad#インタープリター)
 
 ```hs
 runPure :: [String] -> Teletype a -> [String]
@@ -437,7 +437,7 @@ run p = case view p of
 
 自作の `runIO` は `Return _` で結果を捨てて `IO ()` を返していましたが、動かす対象が `Teletype ()` の `greet` だけだったからです。ここでは `Return a` の値を取り出してそのまま結果として返すので、型は `IO a` になります。結果が `()` 以外の手順書にもそのまま使え、後述の `interpretWithMonad` とも型が揃います。
 
-命令を 1 つずつ別のモナドへ変換する `interpretWithMonad` も用意されています。free パッケージの `foldFree` に相当します。👉[Freeモナド](https://zenn.dev/7shi/articles/20260808-haskell-free-monad#free-%E3%83%91%E3%83%83%E3%82%B1%E3%83%BC%E3%82%B8)
+命令を 1 つずつ別のモナドへ変換する `interpretWithMonad` も用意されています。free パッケージの `foldFree` に相当します。👉[Freeモナド](https://zenn.dev/7shi/articles/20260808-haskell-free-monad#free-パッケージ)
 
 ```hs
 import Control.Monad.Operational

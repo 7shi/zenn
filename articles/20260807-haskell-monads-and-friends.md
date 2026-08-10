@@ -38,7 +38,7 @@ Haskell では、自作した型を `do` で使うには `Monad` 型クラスの
 
 # do を使うための型クラス
 
-このシリーズは、モナドを説明するたびに bind を書く練習問題を出題してきました。👉[状態系モナド](https://qiita.com/7shi/items/2e9bff5d88302de1a9e9#state%E3%83%A2%E3%83%8A%E3%83%89)
+このシリーズは、モナドを説明するたびに bind を書く練習問題を出題してきました。👉[状態系モナド](https://qiita.com/7shi/items/2e9bff5d88302de1a9e9#stateモナド)
 
 State を扱う `bind` の解答例です。
 
@@ -71,7 +71,7 @@ fib x = (`evalState` (0, 1)) $
 
 ## Monad のスーパークラス
 
-型クラスは `class` で宣言し、`instance` で型ごとに実装します。`Monad` は標準ライブラリで宣言済みなので、書くのは `instance` だけです。👉[型クラス](https://zenn.dev/7shi/articles/20260805-haskell-type-classes#class-%E3%81%A8-instance)
+型クラスは `class` で宣言し、`instance` で型ごとに実装します。`Monad` は標準ライブラリで宣言済みなので、書くのは `instance` だけです。👉[型クラス](https://zenn.dev/7shi/articles/20260805-haskell-type-classes#class-と-instance)
 
 まず宣言を見ます。
 
@@ -129,7 +129,7 @@ class Applicative m => Monad m       where (>>=) :: m a -> (a -> m b) -> m b
 |`Applicative`|`pure`, `<*>`|引数が複数ある関数を適用する|
 |`Monad`|`>>=`|前の結果を見て次を決める|
 
-`<$>` と `<*>` は、シリーズの早い段階から Applicative スタイルとして使ってきたものです。👉[アクション](https://qiita.com/7shi/items/85afd7bbd5d6c4115ad6#applicative%E3%82%B9%E3%82%BF%E3%82%A4%E3%83%AB)
+`<$>` と `<*>` は、シリーズの早い段階から Applicative スタイルとして使ってきたものです。👉[アクション](https://qiita.com/7shi/items/85afd7bbd5d6c4115ad6#applicativeスタイル)
 
 それが `Functor`・`Applicative` という型クラスのメソッドであることは、これまで説明を先送りにしてきました。モナドを自作しようとすると、この 2 つを否応なく実装することになります。
 
@@ -158,7 +158,7 @@ fmap :: Functor f => (a -> b) -> f a -> f b
 
 ## 持ち上げ
 
-中に値が 1 つ入っているだけの `Identity` で `fmap` を試します。👉[モナド変換子](https://qiita.com/7shi/items/4408b76624067c17e933#identity%E3%83%A2%E3%83%8A%E3%83%89)
+中に値が 1 つ入っているだけの `Identity` で `fmap` を試します。👉[モナド変換子](https://qiita.com/7shi/items/4408b76624067c17e933#identityモナド)
 
 ```text:GHCi
 ghci> import Data.Functor.Identity
@@ -226,7 +226,7 @@ map  ::              (a -> b) -> [a] -> [b]
 
 ## liftM
 
-「持ち上げ」は、モナド変換子で `lift` や `liftM` を扱ったときと同じ言い回しです。👉[モナド変換子](https://qiita.com/7shi/items/4408b76624067c17e933#%E6%8C%81%E3%81%A1%E4%B8%8A%E3%81%92)
+「持ち上げ」は、モナド変換子で `lift` や `liftM` を扱ったときと同じ言い回しです。👉[モナド変換子](https://qiita.com/7shi/items/4408b76624067c17e933#持ち上げ)
 
 その `liftM` は標準ライブラリにある関数で、名前のとおりモナド（M）への持ち上げ（lift）です。
 
@@ -278,7 +278,7 @@ fmap (f . g) == fmap f . fmap g  -- 準同型
 
 ### ファンクター則を破る例
 
-コンパイラはこれを検査してくれません。`Semigroup` の結合法則と同じく、インスタンスを書く側が守るべき約束です。👉[型クラス](https://zenn.dev/7shi/articles/20260805-haskell-type-classes#semigroup-%E3%81%A8-monoid)
+コンパイラはこれを検査してくれません。`Semigroup` の結合法則と同じく、インスタンスを書く側が守るべき約束です。👉[型クラス](https://zenn.dev/7shi/articles/20260805-haskell-type-classes#semigroup-と-monoid)
 
 たとえば `Maybe` の `fmap` を次のように書いても、型は通ります。
 
@@ -374,7 +374,7 @@ Applicative を直訳すれば「適用可能」で、「複数の引数が適�
 
 ## Applicative スタイル
 
-`<$>`・`<*>` を並べる書き方は、**Applicative スタイル**として紹介していました。`>>=` は「アクションを返す関数」としか繋げませんが、`<$>`・`<*>` なら素の関数をそのまま使えて、結果は自動的にアクションに入れて返されます。👉[アクション](https://qiita.com/7shi/items/85afd7bbd5d6c4115ad6#applicative%E3%82%B9%E3%82%BF%E3%82%A4%E3%83%AB)
+`<$>`・`<*>` を並べる書き方は、**Applicative スタイル**として紹介していました。`>>=` は「アクションを返す関数」としか繋げませんが、`<$>`・`<*>` なら素の関数をそのまま使えて、結果は自動的にアクションに入れて返されます。👉[アクション](https://qiita.com/7shi/items/85afd7bbd5d6c4115ad6#applicativeスタイル)
 
 当時は演算子の使い方だけを示しましたが、その正体は `Functor`・`Applicative` のメソッドだったわけです。最初の引数を `<$>` で渡し、2 番目以降を `<*>` で繋いでいく、というのがこのスタイルの形です。
 
@@ -412,7 +412,7 @@ Just 1
 Just 2
 ```
 
-`<*`・`*>` は、左右の両方を評価しながら、結果としては不等号が向いている側だけを残す演算子です。`<*` なら左の値、`*>` なら右の値が残ります。構文解析で括弧を読み飛ばすのに使いました。👉[構文解析](https://qiita.com/7shi/items/b8c741e78a96ea2c10fe#%E6%BC%94%E7%AE%97%E5%AD%90)
+`<*`・`*>` は、左右の両方を評価しながら、結果としては不等号が向いている側だけを残す演算子です。`<*` なら左の値、`*>` なら右の値が残ります。構文解析で括弧を読み飛ばすのに使いました。👉[構文解析](https://qiita.com/7shi/items/b8c741e78a96ea2c10fe#演算子)
 
 ## return と pure
 
@@ -723,7 +723,7 @@ f >=> return    == f                -- 右単位元
 
 `>=>` を掛け算だと思えば、`return` は `1` に当たります。モナド則は「`return` を単位元として、モナドを返す関数が `>=>` で結合的に合成できる」という要求だったことになります。
 
-単位元を持ち結合法則を満たす構造は**モノイド**です。前回 `Semigroup` と `Monoid` で見たのと同じ形が、`<>` と `mempty` の代わりに `>=>` と `return` で現れています。👉[型クラス](https://zenn.dev/7shi/articles/20260805-haskell-type-classes#semigroup-%E3%81%A8-monoid)
+単位元を持ち結合法則を満たす構造は**モノイド**です。前回 `Semigroup` と `Monoid` で見たのと同じ形が、`<>` と `mempty` の代わりに `>=>` と `return` で現れています。👉[型クラス](https://zenn.dev/7shi/articles/20260805-haskell-type-classes#semigroup-と-monoid)
 
 ## ZipList
 

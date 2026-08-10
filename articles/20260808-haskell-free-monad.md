@@ -120,7 +120,7 @@ data Free f a = Pure a | Free (f (Free f a))
 
 ## 種
 
-`f` に入るのは `Two` や `[]` で、単独では型にならず、型を 1 つ受け取って初めて型になります。この「型の型」を**種**（kind）と呼びます。👉[型クラス](https://zenn.dev/7shi/articles/20260805-haskell-type-classes#%E5%9E%8B%E5%BC%95%E6%95%B0%E3%82%92%E5%8F%96%E3%82%8B%E5%9E%8B%E3%82%AF%E3%83%A9%E3%82%B9)
+`f` に入るのは `Two` や `[]` で、単独では型にならず、型を 1 つ受け取って初めて型になります。この「型の型」を**種**（kind）と呼びます。👉[型クラス](https://zenn.dev/7shi/articles/20260805-haskell-type-classes#型引数を取る型クラス)
 
 GHCi の `:k` で確認します。
 
@@ -150,7 +150,7 @@ ghci> :k (,)
 
 ## インスタンス
 
-`Monad` を実装します。`>>=` さえ書けば `fmap` は `liftM`、`<*>` は `ap` で埋まる定型が使えます。👉[モナドとゆかいな仲間たち](https://zenn.dev/7shi/articles/20260807-haskell-monads-and-friends#3-%E6%AE%B5%E3%81%BE%E3%81%A8%E3%82%81%E3%81%A6%E6%9B%B8%E3%81%8F%E5%AE%9A%E5%9E%8B)
+`Monad` を実装します。`>>=` さえ書けば `fmap` は `liftM`、`<*>` は `ap` で埋まる定型が使えます。👉[モナドとゆかいな仲間たち](https://zenn.dev/7shi/articles/20260807-haskell-monads-and-friends#3-段まとめて書く定型)
 
 ```hs
 import Control.Monad (liftM, ap)
@@ -176,7 +176,7 @@ instance Functor f => Monad (Free f) where
 
 `Tree` では左右を個別に書き、`Rose` では `map` で書いていたところが、`fmap` の 1 行にまとまりました。
 
-その `fmap` は、枝の形 `f` に対して呼んでいます。つまり `f` が `Functor` のインスタンスでなければ、この行は書けません。そのため `instance` に `Functor f =>` という制約が付いています。`instance` 側に型クラス制約を書けることは既に見た通りです。👉[型クラス](https://zenn.dev/7shi/articles/20260805-haskell-type-classes#instance-%E5%81%B4%E3%81%AE%E5%88%B6%E7%B4%84)
+その `fmap` は、枝の形 `f` に対して呼んでいます。つまり `f` が `Functor` のインスタンスでなければ、この行は書けません。そのため `instance` に `Functor f =>` という制約が付いています。`instance` 側に型クラス制約を書けることは既に見た通りです。👉[型クラス](https://zenn.dev/7shi/articles/20260805-haskell-type-classes#instance-側の制約)
 
 逆に言えば、`Functor` が必要になるのはこの 1 か所だけです。Free モナドが枝の形に求めるのは「辿れること」だけで、それが `Functor` という形で現れています。
 
@@ -225,7 +225,7 @@ main = do
 `show` は本来、`read` で読み戻せる Haskell の式を返すのが建前です。`(1 2)` はそうなっていません。ここでは木の形が見やすいことを優先して、表示専用の形式にしています。
 
 :::message
-`Free Two a` のように型を固定した `instance` は、GHC2021 では書けますが、それ以前の標準（Haskell2010）では `FlexibleInstances` という言語拡張が必要となります。言語拡張はソースの先頭に `{-# LANGUAGE ~ #-}` と書きます。👉[IOモナド](https://qiita.com/7shi/items/d3d3492ddd90d47160f2#%E3%82%A2%E3%83%B3%E3%83%9C%E3%83%83%E3%82%AF%E3%82%B9%E5%8C%96%E3%82%BF%E3%83%97%E3%83%AB)
+`Free Two a` のように型を固定した `instance` は、GHC2021 では書けますが、それ以前の標準（Haskell2010）では `FlexibleInstances` という言語拡張が必要となります。言語拡張はソースの先頭に `{-# LANGUAGE ~ #-}` と書きます。👉[IOモナド](https://qiita.com/7shi/items/d3d3492ddd90d47160f2#アンボックス化タプル)
 
 ```hs
 {-# LANGUAGE FlexibleInstances #-}
@@ -310,7 +310,7 @@ instance Show a => Show (Tree a) where
 
 ## 命令の型
 
-ジェネレーターは、値を 1 つ出してその場で中断し、呼び出し元が次を要求したら中断した位置から再開する仕組みです。継続モナドでは、中断した時点の「続き」を継続として取り出し、出力する値と組にして持ち出すことで実現しました。👉[継続モナド](https://zenn.dev/7shi/articles/20260803-haskell-continuation-monad#%E3%82%B8%E3%82%A7%E3%83%8D%E3%83%AC%E3%83%BC%E3%82%BF%E3%83%BC)
+ジェネレーターは、値を 1 つ出してその場で中断し、呼び出し元が次を要求したら中断した位置から再開する仕組みです。継続モナドでは、中断した時点の「続き」を継続として取り出し、出力する値と組にして持ち出すことで実現しました。👉[継続モナド](https://zenn.dev/7shi/articles/20260803-haskell-continuation-monad#ジェネレーター)
 
 Free モナドでは、継続を取り出す仕組みは不要です。命令の型に置き場所を作っておけば、そこに継続が入ります。
 
@@ -504,7 +504,7 @@ data GenF o next = Yield o next deriving Functor
 
 データ型を 1 つ宣言して `Functor` にしただけです。`instance Monad` は 1 行も書いていません。それでも `count` は `do` で書けています。モナドとして働いているのは `Free f` の側で、`GenF o` が渡したのは `Functor` インスタンス、それも `deriving` の 1 語だけです。
 
-モナドを 1 つ自作するには `>>=` を定義し、`Functor`・`Applicative`・`Monad` の 3 段を揃える必要がありました。👉[モナドとゆかいな仲間たち](https://zenn.dev/7shi/articles/20260807-haskell-monads-and-friends#3-%E6%AE%B5%E3%81%BE%E3%81%A8%E3%82%81%E3%81%A6%E6%9B%B8%E3%81%8F%E5%AE%9A%E5%9E%8B)
+モナドを 1 つ自作するには `>>=` を定義し、`Functor`・`Applicative`・`Monad` の 3 段を揃える必要がありました。👉[モナドとゆかいな仲間たち](https://zenn.dev/7shi/articles/20260807-haskell-monads-and-friends#3-段まとめて書く定型)
 
 Free モナドを使えば、その部分は `Free f` が肩代わりします。作る側は命令の型を書いて `Functor` にするだけで、新しいモナドが手に入ります。
 
@@ -753,7 +753,7 @@ runStack (x : xs) (Free (Pop k))    = runStack xs (k x)
 
 なぜ「Free」（自由）と呼ぶのかを説明します。
 
-リストはモノイドです。`<>` で結合でき、単位元が `[]` です。👉[型クラス](https://zenn.dev/7shi/articles/20260805-haskell-type-classes#semigroup-%E3%81%A8-monoid)
+リストはモノイドです。`<>` で結合でき、単位元が `[]` です。👉[型クラス](https://zenn.dev/7shi/articles/20260805-haskell-type-classes#semigroup-と-monoid)
 
 ```text:GHCi
 ghci> [1, 2] <> [3]

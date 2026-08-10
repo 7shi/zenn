@@ -69,7 +69,7 @@ show :: Show a => a -> String
 
 * bind (`>>=`), `return`
 * `deriving Show` 👉[代数的データ型](https://qiita.com/7shi/items/1ce76bde464b4a55c143#show)
-* `Monad m =>` 👉[リストモナド](https://qiita.com/7shi/items/deb19c4cba933590ffbf#%E5%9E%8B%E3%82%AF%E3%83%A9%E3%82%B9%E5%88%B6%E7%B4%84)
+* `Monad m =>` 👉[リストモナド](https://qiita.com/7shi/items/deb19c4cba933590ffbf#型クラス制約)
 
 これらがどのように機能しているのか、型クラスを定義するところから見ていきます。
 
@@ -79,7 +79,7 @@ show :: Show a => a -> String
 
 # class と instance
 
-他言語にある関数のオーバーロード（同じ名前で引数の型が違う関数を複数定義すること）は、型クラスを自分で定義すれば同じようなことができます。👉[代数的データ型](https://qiita.com/7shi/items/1ce76bde464b4a55c143#%E3%82%AA%E3%83%BC%E3%83%90%E3%83%BC%E3%83%AD%E3%83%BC%E3%83%89)
+他言語にある関数のオーバーロード（同じ名前で引数の型が違う関数を複数定義すること）は、型クラスを自分で定義すれば同じようなことができます。👉[代数的データ型](https://qiita.com/7shi/items/1ce76bde464b4a55c143#オーバーロード)
 
 Java のオーバーロードの例です。
 
@@ -135,7 +135,7 @@ ok
 Java において、`class`（型クラスの宣言）はインターフェース、`instance`（型ごとの実装）はそれを実装するクラスに近い関係です。「クラスを個別に具体化したものがインスタンス」という点は共通していますが、具体化される対象が Haskell では型、Java ではオブジェクトという違いがあります。また、Java では型定義の時点でインターフェースを組み込む必要がありますが、型クラスは型定義とは切り離してインスタンスを後付けできます。
 :::
 
-自分で定義した型もインスタンスにできます。以前使った `Color` を使います。👉[代数的データ型](https://qiita.com/7shi/items/1ce76bde464b4a55c143#%E5%88%97%E6%8C%99%E5%9E%8B)
+自分で定義した型もインスタンスにできます。以前使った `Color` を使います。👉[代数的データ型](https://qiita.com/7shi/items/1ce76bde464b4a55c143#列挙型)
 
 ```hs
 data Color = Blue | Red | Green
@@ -349,7 +349,7 @@ instance Read Color where
     readsPrec _ _       = []
 ```
 
-`show` に比べると戻り値が複雑です。文字列から値への変換は、読み取れない場合や途中まで読んだ場合があるためです。（値, 残りの文字列）を返す形は、構文解析でパーサに持たせた形と同じです。👉[構文解析](https://qiita.com/7shi/items/b8c741e78a96ea2c10fe#%E5%8B%95%E4%BD%9C%E5%8E%9F%E7%90%86)
+`show` に比べると戻り値が複雑です。文字列から値への変換は、読み取れない場合や途中まで読んだ場合があるためです。（値, 残りの文字列）を返す形は、構文解析でパーサに持たせた形と同じです。👉[構文解析](https://qiita.com/7shi/items/b8c741e78a96ea2c10fe#動作原理)
 
 この実装は完全一致しか扱わないため、`deriving Read` のように前後の空白を読み飛ばしたり、リストの中に現れる `Color` を読んだりはできません。
 :::
@@ -634,7 +634,7 @@ class Eq a => Ord a where
 
 ## Semigroup と Monoid
 
-もう一組、実際に使われる例を見ます。ログなどを蓄積していく Writer モナドは、蓄積する値の型 `w` に `Monoid` という型クラス制約を要求します。複数の値を 1 つにまとめる操作と、何も蓄積していない初期値の両方が必要になるためです。👉[状態系モナド](https://qiita.com/7shi/items/2e9bff5d88302de1a9e9#writer%E3%83%A2%E3%83%8A%E3%83%89)
+もう一組、実際に使われる例を見ます。ログなどを蓄積していく Writer モナドは、蓄積する値の型 `w` に `Monoid` という型クラス制約を要求します。複数の値を 1 つにまとめる操作と、何も蓄積していない初期値の両方が必要になるためです。👉[状態系モナド](https://qiita.com/7shi/items/2e9bff5d88302de1a9e9#writerモナド)
 
 ```hs:定義（抜粋）
 class Semigroup a where
@@ -728,7 +728,7 @@ Haskell が型クラスにしているのは半群とモノイドの 2 段階だ
 
 ## Writer
 
-Writer モナドは計算の結果とは別に値を書き出していくモナドで、書き出しには `tell` を使い、`runWriter` で「結果と書き出された値」の組を取り出します。👉[状態系モナド](https://qiita.com/7shi/items/2e9bff5d88302de1a9e9#writer%E3%83%A2%E3%83%8A%E3%83%89)
+Writer モナドは計算の結果とは別に値を書き出していくモナドで、書き出しには `tell` を使い、`runWriter` で「結果と書き出された値」の組を取り出します。👉[状態系モナド](https://qiita.com/7shi/items/2e9bff5d88302de1a9e9#writerモナド)
 
 `tell` の型は次の通りです。
 
