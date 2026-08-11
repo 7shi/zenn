@@ -1217,9 +1217,7 @@ Freer という語も紛らわしいところです。`freer-simple` はモジ�
 Eff 系から選ぶなら、更新が続いているかどうかが目安になります。上の表のとおり `freer-simple` は 2022 年 1 月、`cleff` は 2022 年 5 月のリリースが最後で、現行の Stackage LTS には入っていません。本記事が `effectful` を使ったのはこのためです。
 
 :::message
-命令を並べて後からハンドラーが意味を与える、という枠組みには**代数的効果**（algebraic effects）という呼び名もあります。Free・Operational・Eff はいずれもこの系譜にあたります。
-
-Haskell 以外では、言語機能としてエフェクトシステムを備えた処理系もあります。例えば OCaml 5.0 では `effect` 構文として組み込まれています。
+命令を並べて後からハンドラーが意味を与える、という枠組みには**代数的効果**（algebraic effects）という呼び名もあります。Haskell 以外では、標準でエフェクトシステムを備えた処理系もあります。例えば OCaml 5 以降では、`Effect` モジュールが命令とハンドラーを橋渡しし、ハンドラーは継続を受け取って任意の場所から計算を再開できます。👉[チュートリアル](https://github.com/ocaml-multicore/ocaml-effects-tutorial)
 :::
 
 # まとめ
