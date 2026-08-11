@@ -49,7 +49,7 @@ Eff モナドは、複数の効果を混ぜられるよう命令の型を型レ�
 |年|出来事|寄与|
 |---|---|---|
 |2008|Swierstra "Data types à la carte"|複数の命令の型を 1 つの型に合成する手法。この系譜の出発点|
-|2010|Apfelmus「The Operational Monad Tutorial」|継続を `>>=` の側に持たせる方式（前回の主題）|
+|2010|Apfelmus "The Operational Monad Tutorial"|継続を `>>=` の側に持たせる方式（前回の主題）👉[Operationalモナド](https://zenn.dev/7shi/articles/20260809-haskell-operational-monad#参考)|
 |2013|Kiselyov, Sabry, & Swords "Extensible Effects: An Alternative to Monad Transformers"|複数の効果を混ぜる枠組みとして体系化。土台は Free で、命令の型に `Functor` を要求していた|
 |2015|Kiselyov & Ishii "Freer Monads, More Extensible Effects"|土台を Freer に差し替え。`Functor` インスタンスが不要になった|
 
