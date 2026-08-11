@@ -925,7 +925,147 @@ runLogger = reinterpret_ runWriter $ \(Log s) -> tell [s]
 
 冒頭で触れたとおり、この枠組みはモナド変換子と比較される形で発展してきました。実際に書き比べます。
 
-素材はモナド変換子の回の冒頭に出てきたものです。リストを畳んで合計しつつ、途中経過を表示します。状態と `IO` を両方使うので、`State` だけでは書けませんでした。
+素材はモナド変換子の回の冒頭に出てきたもので、リストを畳んで合計します。効果を 3 つに増やして、しきい値を `Reader` で受け取り、合計を `State` に持ち、しきい値を超えた合計だけを `Writer` に記録します。
+
+```hs
+import Control.Monad
+import Control.Monad.Reader
+import Control.Monad.State
+import Control.Monad.Writer
+
+sum' :: Int -> [Int] -> (Int, [Int])
+sum' limit xs = runWriter $ (`runReaderT` limit) $ (`execStateT` 0) $
+    forM_ xs $ \i -> do
+        modify (+ i)
+        v <- get
+        lim <- ask
+        when (v > lim) $ tell [v]
+
+main = print $ sum' 5 [1..5]
+```
+```text:実行結果
+(15,[6,10,15])
+```
+
+`StateT Int (ReaderT Int (Writer [Int]))` というモナドスタックです。これを `Eff` で書き直します。
+
+```hs
+{-# LANGUAGE DataKinds #-}
+import Control.Monad
+import Effectful
+import Effectful.Reader.Static
+import Effectful.State.Static.Local
+import Effectful.Writer.Static.Local
+
+sum' :: Int -> [Int] -> (Int, [Int])
+sum' limit xs = runPureEff $ runWriter $ runReader limit $ execState (0 :: Int) $
+    forM_ xs $ \i -> do
+        modify (+ i)
+        v <- get
+        lim <- ask
+        when (v > lim) $ tell [v :: Int]
+
+main = print $ sum' 5 [1..5]
+```
+```text:実行結果
+(15,[6,10,15])
+```
+
+## 使う分には大差ない
+
+`do` の中身は、型注釈を除いて 1 文字も違いません。
+
+`mtl` では `get`・`ask`・`tell` が型クラスのメソッドになっていて、モナドスタックのどこから呼んでも自動的に持ち上がります。モナド変換子の回で使った `lift` は、ここでは出てきません。👉[モナド変換子](https://qiita.com/7shi/items/4408b76624067c17e933#持ち上げ)
+
+違うのは外側です。モナド変換子は使う効果を `StateT Int (ReaderT Int (Writer [Int]))` という型として積み、`Eff` はハンドラーを `runWriter $ runReader limit $ execState (0 :: Int)` と並べます。
+
+`do` の中身を関数に切り出すと、型もほぼ同じ形になります。
+
+```hs
+prog :: (MonadState Int m, MonadReader Int m, MonadWriter [Int] m) => [Int] -> m ()
+```
+```hs
+prog :: (State Int :> es, Reader Int :> es, Writer [Int] :> es) => [Int] -> Eff es ()
+```
+
+使う効果を制約として並べ、積む順を型に書かない、という書き方自体は `mtl` が先にやっていたことです。`Eff` の発明ではありません。
+
+むしろ `Eff` の方が不便な点もあります。上のコードで `tell [v :: Int]` と注釈が要ったのがそれです。
+
+:::message
+`mtl` の `MonadState s m` は関数従属という仕組みで `m` から `s` を決めるので、`v` の型が推論されます。`Eff` の `State s :> es` は、リスト `es` に `State Int` と `State String` の両方を入れられる書き方なので、`s` を一意に決められません。表現力を上げた分だけ推論が弱くなっています。
+:::
+
+## 効果を自作すると変わる
+
+差がはっきり出るのは、既製の効果では足りなくなったときです。
+
+モナド変換子で新しい効果を作るには、変換子そのもの（`newtype` と `Monad`・`MonadTrans` のインスタンス）に加えて、他の効果と組み合わせるためのインスタンスが要ります。自分の変換子の下にある `MonadState`・`MonadReader` などを素通しするインスタンスと、逆に自分の効果を表す型クラスを既存の変換子それぞれで素通しするインスタンスです。組み合わせの数だけ書くことになります。
+
+`mtl` の既製の効果を `lift` なしで呼べるのは、ライブラリ側でこれを全部書いてあるからです。自作するとその分が自分に回ってきます。
+
+`Eff` では、この回で `Teletype` や `Counter` を作ったとおり、命令の型を GADT で 1 つ書き、ハンドラーを 1 つ書くだけです。他の効果との組み合わせについて書くものはありません。効果はリストに並ぶだけで、互いを知らないためです。
+
+|やりたいこと|モナド変換子|Eff|
+|---|---|---|
+|既製の効果を使う|型クラスのメソッドをそのまま呼ぶ|そのまま呼ぶ|
+|効果を組み合わせる|型を積む（`StateT Int (ReaderT Int (Writer [Int]))`）|ハンドラーを並べる（`runWriter . runReader . execState`）|
+|使う効果を宣言する|`MonadState Int m` などの制約|`State Int :> es` などの制約|
+|効果の型を決める|関数従属で推論される|注釈が要ることがある|
+|新しい効果を作る|変換子と、組み合わせの数だけのインスタンス|命令の型を GADT で 1 つ書いてハンドラーを与える|
+|走らせる|型の積み方に従う|外す順が選べる|
+
+## ハンドラーの順
+
+最後の行を確かめます。先ほどの `sum'` から `do` の中身を `prog` として切り出し、`State` と `Writer` を外す順を入れ替えて 2 通り走らせます。
+
+```hs
+{-# LANGUAGE DataKinds #-}
+import Control.Monad
+import Effectful
+import Effectful.Reader.Static
+import Effectful.State.Static.Local
+import Effectful.Writer.Static.Local
+
+prog :: (State Int :> es, Reader Int :> es, Writer [Int] :> es) => [Int] -> Eff es ()
+prog xs = forM_ xs $ \i -> do
+    modify (+ i)
+    v <- get
+    lim <- ask
+    when (v > lim) $ tell [v :: Int]
+
+main = do
+    print $ runPureEff $ runReader (5 :: Int) $ runWriter @[Int] $ runState (0 :: Int) $ prog [1..5]
+    print $ runPureEff $ runReader (5 :: Int) $ runState (0 :: Int) $ runWriter @[Int] $ prog [1..5]
+```
+```text:実行結果
+(((),15),[6,10,15])
+(((),[6,10,15]),15)
+```
+
+同じ `prog` に対して、ハンドラーを 2 通りの順で適用できています。剥がした順にタプルが外側へ積まれるので、結果の入れ子が変わります。最終状態も見えるように `execState` を `runState` に替えました。
+
+モナド変換子では、`StateT Int (ReaderT Int (Writer [Int]))` と書いた時点で順が決まり、内側から順にしか外せませんでした。`Eff` では手順書の型が `(State Int :> es, Reader Int :> es, Writer [Int] :> es) => Eff es ()` と順序を含まないので、外す側が決められます。
+
+:::message
+`runWriter @[Int]` は型適用という書き方で、型引数を直接指定しています。`Writer w` の `w` がリスト `es` から一意に決まらないため、ここで指定する必要があります。`get` の型が決まらなかったのと同じ事情です。`sum'` で指定が要らなかったのは、`w` が `sum'` の型注釈から決まっていたためです。
+:::
+
+## どちらを使うのか
+
+`mtl` に代表されるモナド変換子は、今も広く使われています。Eff 系がそれを過去のものにしたわけではありません。`effectful` の README も、モナド変換子スタックの置き換えを目指すと述べる一方で、モナド変換子を無用にするつもりはない、と明記しています。
+
+Free から Operational へ進んだときも、優劣ではなく用途の違いでした。👉[Operationalモナド](https://zenn.dev/7shi/articles/20260809-haskell-operational-monad#free-と-operational-の使い分け)
+
+モナド変換子とエフェクトシステムも同じで、別種の効果を組み合わせるという同じ課題に対して、別の解き方が 2 つある、という見方が実情に合っています。
+
+効果が 2〜3 個で固定なら、モナド変換子で十分です。GHC に同梱の `transformers`・`mtl` だけで済み、追加の依存が要りません。周辺ライブラリが `MonadState` のような `mtl` の制約を前提にしていることも多く、そのまま噛み合います。
+
+効果の種類が増えていく場合や、独自の効果を足したい場合は、エフェクトシステムが向いています。モナド変換子で効果を自作するには変換子とインスタンス群を書くことになりますが、エフェクトシステムでは命令の型を 1 つ書いてハンドラーを与えるだけです。テスト用にハンドラーを差し替えられるのも、Free から続く利点です。
+
+## 練習
+
+【問4】次はモナド変換子の回の冒頭に出てきたコードです。リストを畳んで合計しつつ、途中経過を表示します。👉[モナド変換子](https://qiita.com/7shi/items/4408b76624067c17e933#モナド変換子)
 
 ```hs
 import Control.Monad
@@ -937,11 +1077,10 @@ sum' xs = (`execStateT` 0) $ do
         v <- get
         lift $ putStrLn $ "+" ++ show i ++ " -> " ++ show v
 
-main = do
-    print =<< sum' [1..5]
+main = print =<< sum' [1..5]
 ```
 
-`StateT` を積み、内側の `putStrLn` を `lift` で持ち上げています。これを `Eff` で書き直します。
+これを `Eff` で書き直してください。効果は `State` と `IO` の 2 つです。
 
 ```hs
 {-# LANGUAGE DataKinds #-}
@@ -950,11 +1089,7 @@ import Effectful
 import Effectful.State.Static.Local
 
 sum' :: [Int] -> IO Int
-sum' xs = runEff $ execState (0 :: Int) $
-    forM_ xs $ \i -> do
-        modify (+ i)
-        v <- get
-        liftIO $ putStrLn $ "+" ++ show i ++ " -> " ++ show (v :: Int)
+sum' xs = undefined  -- ここを書く
 
 main = print =<< sum' [1..5]
 ```
@@ -967,116 +1102,72 @@ main = print =<< sum' [1..5]
 15
 ```
 
-出力は 1 文字も変わりません。`do` の中身もほぼそのままで、`lift` が `liftIO` になっただけです。
-
-:::message
-`v <- get` だけでは `v` の型が決まりません。`get` の型は `State s :> es => Eff es s` で、`s` はリスト `es` から一意には決まらないためです。`show (v :: Int)` のように、使う側で型注釈が必要です。
-:::
-
-## 持ち上げの回数
-
-この書き換えで効いているのは、`lift` の回数という概念が消えたことです。
-
-モナド変換子では、`lift` はモナドスタックを 1 段だけ登ります。`StateT` の中でさらに `ReaderT` を使えば `lift . lift` が必要になり、その部分を関数に切り出して単独で呼ぶと段数が合わなくなってエラーになります。👉[モナド変換子](https://qiita.com/7shi/items/4408b76624067c17e933#多重持ち上げ)
-
-`Eff` にはスタックがないので、この問題自体が起きません。効果はリストに入っているかいないかだけで、深さがありません。`liftIO` も、モナド変換子のときは「深さに関係なく一気に持ち上げる `IO` 専用の関数」でしたが、`Eff` では単に `IOE` の効果を呼ぶ関数です。
-
-効果を足すときの手間も変わります。
-
-|やりたいこと|モナド変換子|Eff|
-|---|---|---|
-|効果を組み合わせる|型を積む（`StateT Int (WriterT [String] IO)`）|リストに並べる（`State Int :> es`・`Writer [String] :> es`）|
-|内側のアクションを使う|`lift`・`lift . lift`・`liftIO`|`liftIO` のみ|
-|効果を 1 つ足す|スタックが深くなり `lift` の数が変わる|制約を 1 つ足すだけ|
-|新しい効果を作る|変換子とインスタンス群を書く|命令の型を GADT で 1 つ書く|
-|走らせる|`runWriterT . runStateT`（型の順に従う）|`runWriter . runState`（順が選べる）|
-
-## ハンドラーの順
-
-最後の行を確かめます。`State` と `Writer` を使う手順書を書きます。
-
-```hs
-{-# LANGUAGE DataKinds #-}
-import Effectful
-import Effectful.State.Static.Local
-import Effectful.Writer.Static.Local
-
-prog :: (State Int :> es, Writer [String] :> es) => Eff es ()
-prog = do
-    n <- get
-    tell ["n = " ++ show (n :: Int)]
-    put (n + 1)
-
-main = do
-    print $ runPureEff $ runWriter @[String] $ runState (0 :: Int) prog
-    print $ runPureEff $ runState (0 :: Int) $ runWriter @[String] prog
-```
-```text:実行結果
-(((),1),["n = 0"])
-(((),["n = 0"]),1)
-```
-
-同じ `prog` に対して、ハンドラーを 2 通りの順で適用できています。剥がした順にタプルが外側へ積まれるので、結果の入れ子が変わります。
-
-モナド変換子では、`StateT Int (WriterT [String] Identity)` と書いた時点で順が決まり、`runWriterT . runStateT` の順でしか外せませんでした。`Eff` では手順書の型が `(State Int :> es, Writer [String] :> es) => Eff es ()` と順序を含まないので、外す側が決められます。
-
-:::message
-`runWriter @[String]` は型適用という書き方で、型引数を直接指定しています。`Writer w` の `w` がリスト `es` から一意に決まらないため、ここで指定する必要があります。`get` の型が決まらなかったのと同じ事情です。
-:::
-
-## どちらを使うのか
-
-`mtl` に代表されるモナド変換子は、今も広く使われています。Eff 系がそれを過去のものにしたわけではありません。`effectful` の README も、モナド変換子スタックの置き換えを目指すと述べる一方で、モナド変換子を無用にするつもりはない、と明記しています。
-
-Free から Operational へ進んだときも、優劣ではなく用途の違いでした。👉[Operationalモナド](https://zenn.dev/7shi/articles/20260809-haskell-operational-monad#free-と-operational-の使い分け)
-
-モナド変換子とエフェクトシステムも同じで、別種の効果を組み合わせるという同じ課題に対して、別の解き方が 2 つある、という見方が実情に合っています。
-
-効果が 2〜3 個で固定なら、モナド変換子で十分です。GHC に同梱の `transformers`・`mtl` だけで済み、追加の依存が要りません。周辺ライブラリが `MonadState` のような mtl の制約を前提にしていることも多く、そのまま噛み合います。
-
-効果の種類が増えていく場合や、独自の効果を足したい場合は、エフェクトシステムが向いています。モナド変換子で効果を自作するには変換子とインスタンス群を書くことになりますが、エフェクトシステムでは命令の型を 1 つ書いてハンドラーを与えるだけです。テスト用にハンドラーを差し替えられるのも、Free から続く利点です。
-
-## 練習
-
-【問4】上の `sum'` に `Writer` を足して、途中経過を表示する代わりに記録してください。`IO` を使わなくなるので、`runEff` は `runPureEff` に変わります。
-
-```hs
-sum' :: [Int] -> (Int, [String])
-sum' xs = undefined  -- ここを書く
-
-main = do
-    let (s, logs) = sum' [1..5]
-    mapM_ putStrLn logs
-    print s
-```
-```text:実行結果
-+1 -> 1
-+2 -> 3
-+3 -> 6
-+4 -> 10
-+5 -> 15
-15
-```
-
 :::details 解答例
+```hs
+sum' :: [Int] -> IO Int
+sum' xs = runEff $ execState (0 :: Int) $
+    forM_ xs $ \i -> do
+        modify (+ i)
+        v <- get
+        liftIO $ putStrLn $ "+" ++ show i ++ " -> " ++ show (v :: Int)
+```
+
+`do` の中身は `lift` が `liftIO` に変わっただけです。ここは `IO` を持ち上げているところなので、変換子版でも `lift` の代わりに `liftIO` と書けました。👉[モナド変換子](https://qiita.com/7shi/items/4408b76624067c17e933#liftio)
+
+外側は `(`execStateT` 0)` が `execState (0 :: Int)` になり、`runEff` が付きます。`IOE` が残っているので `runPureEff` は使えません。
+
+`show (v :: Int)` の注釈は `Eff` 側だけで必要です。`mtl` なら `MonadState Int m` から `v` の型が決まりますが、`State Int :> es` からは決まりません。
+:::
+
+【問5】ハンドラーの順で結果の入れ子が変わることは確かめました。順によって意味が変わる例も見ます。合計を進めながら、しきい値を超えた時点で打ち切る手順書 `prog` を書いてください。打ち切りには `Effectful.Error.Static` の `Error` 効果を使います。
+
+```hs
+throwError          :: Error e :> es => e -> Eff es a
+runErrorNoCallStack :: Eff (Error e : es) a -> Eff es (Either e a)
+```
+
+:::message
+`runError` もあり、`Either (CallStack, e) a` を返します。エラーがどこで起きたかを追える代わりに結果の型が複雑になるので、ここでは `runErrorNoCallStack` を使います。
+:::
+
 ```hs
 {-# LANGUAGE DataKinds #-}
 import Control.Monad
 import Effectful
+import Effectful.Error.Static
 import Effectful.State.Static.Local
-import Effectful.Writer.Static.Local
 
-sum' :: [Int] -> (Int, [String])
-sum' xs = runPureEff $ runWriter @[String] $ execState (0 :: Int) $
-    forM_ xs $ \i -> do
-        modify (+ i)
-        v <- get
-        tell ["+" ++ show i ++ " -> " ++ show (v :: Int)]
+prog :: (State Int :> es, Error String :> es) => [Int] -> Eff es ()
+prog = undefined  -- ここを書く
+
+main = do
+    print $ runPureEff $ runErrorNoCallStack @String $ runState (0 :: Int) $ prog [1..5]
+    print $ runPureEff $ runState (0 :: Int) $ runErrorNoCallStack @String $ prog [1..5]
+```
+```text:実行結果
+Left "over: 6"
+(Left "over: 6",6)
 ```
 
-`liftIO $ putStrLn ...` を `tell [...]` に替え、ハンドラーとして `runWriter` を足しただけです。手順書の側では `Writer` を使うことを宣言する必要すらなく、型は推論に任せています。
+:::details 解答例
+```hs
+prog :: (State Int :> es, Error String :> es) => [Int] -> Eff es ()
+prog xs = forM_ xs $ \i -> do
+    modify (+ i)
+    v <- get
+    when (v > 5) $ throwError ("over: " ++ show (v :: Int))
+```
 
-`IOE` を使わなくなったので `runEff` が `runPureEff` になり、`sum'` の型から `IO` が消えました。モナド変換子なら `StateT Int IO` を `WriterT [String] (State Int)` に組み替えるところですが、ここではハンドラーを 1 つ足し引きしただけです。
+同じ `prog` なのに、打ち切った時点の合計が残る場合と消える場合があります。結果の型を並べると理由が見えます。
+
+```hs
+Either String ((), Int)  -- runState が内側
+(Either String (), Int)  -- runState が外側
+```
+
+内側のハンドラーから先に適用され、外側のハンドラーはその結果を受け取ります。`runState` が内側だと、状態は `Either` の中に入るので、`Left` になった時点で一緒に捨てられます。`runState` が外側だと、状態は `Either` の外に出るので残ります。
+
+モナド変換子では、`StateT Int (Either String)` と型を書いた時点で前者に決まります。例外処理の回で `StateT` と `Either` を合成したとき、失敗すると `Left` だけが返って読み進めた位置が分からなくなったのがこれです。後者にしたければ型を組み替えるしかありません。👉[例外処理](https://qiita.com/7shi/items/73e534c47bbebc71b37e#モナド変換子で合成)
 :::
 
 # エフェクトシステムの現在
@@ -1121,7 +1212,7 @@ Freer という語も紛らわしいところです。`freer-simple` はモジ�
 
 ## 選ぶときの目安
 
-`mtl` がいちばん使われていることは先に触れたとおりです。エフェクトシステムは標準化されていないため、複数の実装が併存しています。
+エフェクトシステムは標準化されていないため、複数の実装が併存しています。
 
 Eff 系から選ぶなら、更新が続いているかどうかが目安になります。上の表のとおり `freer-simple` は 2022 年 1 月、`cleff` は 2022 年 5 月のリリースが最後で、現行の Stackage LTS には入っていません。本記事が `effectful` を使ったのはこのためです。
 
@@ -1141,17 +1232,17 @@ Eff モナドは、使える命令の型を 1 つからリストへ広げたモ�
 
 実際のパッケージも主にこの 2 つの方式に別れています。
 
-この枠組みが作られた動機は、モナド変換子を組み合わせるときの複雑さにありました。並べると差がはっきりします。
+この枠組みが作られた動機は、モナド変換子を組み合わせるときの複雑さにありました。ただし既製の効果を使うだけなら、`mtl` の型クラスが持ち上げを引き受けるので、書き味はほとんど変わりません。
 
 |モナド変換子|Eff モナド|
 |---|---|
-|`StateT Int (WriterT [String] IO) a`|`Eff es a` と `State Int :> es`・`Writer [String] :> es`|
-|`lift`・`lift . lift`・`liftIO`|`liftIO` のみ|
-|効果を足すと `lift` の数が変わる|制約を 1 つ足すだけ|
+|`StateT Int (ReaderT Int (Writer [Int])) a`|`Eff es a` と `State Int :> es`・`Reader Int :> es`・`Writer [Int] :> es`|
+|`MonadState Int m` などの制約で書ける|`State Int :> es` などの制約で書ける|
+|効果の型は関数従属で推論される|注釈が要ることがある|
 |効果を作るには変換子とインスタンス群|命令の型を GADT で 1 つ|
 |外す順は型で決まる|外す順を選べる|
 
-Eff モナドでは、モナドの積み重ねではなく、効果の集合として扱うことで、フラットに扱えるのが特徴です。
+Eff モナドでは、モナドの積み重ねではなく、効果の集合として扱います。差が出るのは、効果を自作するときと、ハンドラーを外す順です。
 
 # 参考
 
