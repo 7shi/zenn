@@ -589,7 +589,7 @@ main = loop gen
 
 `Gen` と `loop` は `callCC` 版と同じもので、結果も一致します。違うのは `yield`・`runGen` と、`ccOut` が消えた本体だけです。
 
-`callCC` 版では脱出継続 `ccOut` を `yield` と `runGen` の間で引き回す必要がありましたが、`shift` は呼び出し元まで戻るのでその引き回しが要りません。`yield` から引数が 1 つ消えています。👉[参考 (Scheme)](https://qiita.com/7shi/items/6db3e19ddc1f8552d9a0)
+`callCC` 版では脱出継続 `ccOut` を `yield` と `runGen` の間で引き回す必要がありましたが、`shift` は呼び出し元まで戻るのでその引き回しが不要です。`yield` から引数が 1 つ消えています。👉[参考 (Scheme)](https://qiita.com/7shi/items/6db3e19ddc1f8552d9a0)
 
 ## 共通部品としての限定継続
 
