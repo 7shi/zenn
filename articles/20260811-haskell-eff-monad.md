@@ -32,7 +32,7 @@ Eff モナドは、複数の効果を混ぜられるよう命令の型を型レ�
 1. [Haskell Freeモナド 超入門](https://zenn.dev/7shi/articles/20260808-haskell-free-monad)
 1. [Haskell Operationalモナド 超入門](https://zenn.dev/7shi/articles/20260809-haskell-operational-monad)
 1. **Haskell Effモナド 超入門** ← この記事
-1. 【予定】Haskell アロー 超入門
+1. [Haskell アロー 超入門](https://zenn.dev/7shi/articles/20260813-haskell-arrow)
 
 # Free モナドから拡張可能な効果へ
 

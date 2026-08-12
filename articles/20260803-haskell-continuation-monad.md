@@ -32,7 +32,7 @@ Haskell ではモナドと呼ばれる部品を組み合わせてプログラム
 1. [Haskell Freeモナド 超入門](https://zenn.dev/7shi/articles/20260808-haskell-free-monad)
 1. [Haskell Operationalモナド 超入門](https://zenn.dev/7shi/articles/20260809-haskell-operational-monad)
 1. [Haskell Effモナド 超入門](https://zenn.dev/7shi/articles/20260811-haskell-eff-monad)
-1. 【予定】Haskell アロー 超入門
+1. [Haskell アロー 超入門](https://zenn.dev/7shi/articles/20260813-haskell-arrow)
 
 # bind と継続
 
