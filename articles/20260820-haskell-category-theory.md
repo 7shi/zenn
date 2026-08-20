@@ -50,7 +50,7 @@ Haskell の解説で圏論の名前を見かけることがありますが、こ
 |`instance Category (Kleisli m)`|Kleisli 圏|
 |`join` と `return`、モナド則|モノイド対象|
 |`Free` の「モナド則だけを満たす」|自由生成・随伴|
-|`instr :>>= k` に `Functor` が不要|Coyoneda・米田の補題|
+|`instr :>>= k` に `Functor` が不要|米田の補題・Coyoneda|
 
 どれも既に動かしたものです。新しく覚えることは、コードに付ける用語と、その用語が表す概念だけです。
 
@@ -1620,7 +1620,7 @@ main = do
 `Box` には `Functor` インスタンスがありませんが、`Coyoneda Box` に対して `fmap` が使用できます。`fmap` を 2 回重ねれば、関数が `show . (+1)` と合成されます。任意の型構築子を `Functor` にする構成になっています。
 
 :::message
-Yoneda は性能の改善にも使われます。`fmap` を重ねても関数の合成にしかならないので、`fmap` を何回も適用するコードで `f b` を作り直す手間が省けます。同じ発想で Free モナドの左結合 `>>=` を高速化する Codensity という道具もあります。
+`Coyoneda`・`Yoneda` は [kan-extensions](https://hackage.haskell.org/package/kan-extensions) パッケージの `Data.Functor.Coyoneda`・`Data.Functor.Yoneda` にあります。本記事では base だけで完結させるため自作しました。
 :::
 
 ## 双対の対比
@@ -1640,7 +1640,7 @@ Yoneda と Coyoneda を並べます。
 Yoneda 側の往復が米田の補題でした。Coyoneda 側の往復はそれを裏返した主張で、**余米田の補題**（co-Yoneda lemma）と呼ばれます。`f` が関手であれば、`f b` と `b -> a` の組は `f a` と同型になる、というものです。ここで `f` が関手であることが必要なのは、往復の片道である `lowerCoyoneda` が `fmap` を使うためです。裏を返せば、`f` が関手でない場合に残るのは組の側だけで、それが `Coyoneda f` を新たに関手にしています。
 
 :::message
-`Coyoneda`・`Yoneda` は [kan-extensions](https://hackage.haskell.org/package/kan-extensions) パッケージの `Data.Functor.Coyoneda`・`Data.Functor.Yoneda` にあります。本記事では base だけで完結させるため自作しました。
+Yoneda は性能の改善にも使われます。`fmap` を重ねても関数の合成にしかならないので、`fmap` を何回も適用するコードで `f b` を作り直す手間が省けます。同じ発想で Free モナドの左結合 `>>=` を高速化する Codensity という道具もあります。
 :::
 
 ## Operational との関係
