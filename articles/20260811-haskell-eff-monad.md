@@ -121,7 +121,7 @@ Teletype ': '[Counter]  -- '[Teletype, Counter] と同じ
 
 GHCi では `:set` で言語拡張を有効にできます。種を確認します。👉[Freeモナド](https://zenn.dev/7shi/articles/20260808-haskell-free-monad#種)
 
-```text:GHCi
+```hs:GHCi
 ghci> :set -XDataKinds
 ghci> :k Teletype
 Teletype :: * -> *
@@ -134,7 +134,7 @@ ghci> :k '[Teletype, Counter]
 :::message
 `DataKinds` を有効にしないと、型の位置にリストを書いた時点でエラーになります。
 
-```text:GHCi
+```hs:GHCi
 ghci> :k '[Teletype, Counter]
 Illegal type: ‘'[Teletype, Counter]’
   Perhaps you intended to use DataKinds

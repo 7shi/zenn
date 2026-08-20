@@ -124,7 +124,7 @@ data Free f a = Pure a | Free (f (Free f a))
 
 GHCi の `:k` で確認します。
 
-```text:GHCi
+```hs:GHCi
 ghci> :k Two
 Two :: * -> *
 ghci> :k Free
@@ -140,7 +140,7 @@ Free Two Int :: *
 :::message
 `Two` はタプルで済ませられそうにも見えますが、タプルは左右で別々の型が指定できるため、型変数を 2 つ取ります。
 
-```text:GHCi
+```hs:GHCi
 ghci> :k (,)
 (,) :: * -> * -> *
 ```
@@ -331,7 +331,7 @@ instance Functor (GenF o) where
 
 `fmap` が触るのは `next` だけです。出力する値 `o` は型引数の位置が違うので、そのまま残ります。`instance` に指定したのが `(GenF o)` になっているのがその理由です。`Functor` にできるのは種が `* -> *` の型だけで、`GenF` は種が 1 つ多いため、そのままではインスタンスにできません。
 
-```text:GHCi
+```hs:GHCi
 ghci> :k GenF
 GenF :: * -> * -> *
 ghci> :k GenF Int
@@ -755,7 +755,7 @@ runStack (x : xs) (Free (Pop k))    = runStack xs (k x)
 
 リストはモノイドです。`<>` で結合でき、単位元が `[]` です。👉[型クラス](https://zenn.dev/7shi/articles/20260805-haskell-type-classes#semigroup-と-monoid)
 
-```text:GHCi
+```hs:GHCi
 ghci> [1, 2] <> [3]
 [1,2,3]
 ```

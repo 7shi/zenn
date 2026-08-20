@@ -75,7 +75,7 @@ fib x = (`evalState` (0, 1)) $
 
 まず宣言を見ます。
 
-```text:GHCi
+```hs:GHCi
 ghci> :i Monad
 type Monad :: (* -> *) -> Constraint
 class Applicative m => Monad m where
@@ -92,7 +92,7 @@ class Applicative m => Monad m where
 
 その `Applicative` も同じ形をしています。
 
-```text:GHCi
+```hs:GHCi
 ghci> :i Applicative
 type Applicative :: (* -> *) -> Constraint
 class Functor f => Applicative f where
@@ -160,7 +160,7 @@ fmap :: Functor f => (a -> b) -> f a -> f b
 
 中に値が 1 つ入っているだけの `Identity` で `fmap` を試します。👉[モナド変換子](https://qiita.com/7shi/items/4408b76624067c17e933#identityモナド)
 
-```text:GHCi
+```hs:GHCi
 ghci> import Data.Functor.Identity
 ghci> double = (* 2) :: Int -> Int
 ghci> double 3
@@ -173,7 +173,7 @@ Identity 6
 
 関数だけを渡すと、このことが型にも表れます。
 
-```text:GHCi
+```hs:GHCi
 ghci> :t double
 double :: Int -> Int
 ghci> :t fmap double
@@ -335,7 +335,7 @@ class Functor f => Applicative f where
 
 `fmap`（`<$>`）は 1 引数の関数を `f` の世界へ持ち上げました。引数が 2 つある関数を同じように持ち上げると何が起きるか、`Functor` のときと同じく `Identity` で試します。
 
-```text:GHCi
+```hs:GHCi
 ghci> import Data.Functor.Identity
 ghci> :t (+) <$> Identity 1
 (+) <$> Identity 1 :: Num a => Identity (a -> a)
@@ -350,7 +350,7 @@ ghci> :t (+) <$> Identity 1
 
 違いは、関数が `f` に入っているかどうかだけです。`fmap`（`<$>`）は外にある関数を持ち上げますが、`<*>` は既に `f` に入っている関数をそのまま使います。残っていた引数を `<*>` で渡せば、2 引数の関数を持ち上げたことになります。
 
-```text:GHCi
+```hs:GHCi
 ghci> runIdentity ((+) <$> Identity 1 <*> Identity 2)
 3
 ```
@@ -559,7 +559,7 @@ fmap f x == pure f <*> x
 
 `Functor` と `Applicative` は別々のインスタンスとして書くため、両者がばらばらの動きをしないように実装する必要があります。この式は `<$>` と `<*>` を混ぜた Applicative スタイルが意味を持つための前提でもあります。
 
-```text:GHCi
+```hs:GHCi
 ghci> (+) <$> Just 1 <*> Just 2
 Just 3
 ghci> pure (+) <*> Just 1 <*> Just 2
@@ -733,7 +733,7 @@ f >=> return    == f                -- 右単位元
 
 定義に使う関数を先に確認します。`zipWith` は 2 つのリストを同じ位置どうし組み合わせ、`repeat` は同じ値の無限リストを作ります。
 
-```text:GHCi
+```hs:GHCi
 ghci> zipWith (+) [1, 2, 3] [10, 20, 30]
 [11,22,33]
 ghci> zipWith (+) [1, 2, 3] [10, 20]

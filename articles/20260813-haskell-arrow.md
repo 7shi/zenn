@@ -207,7 +207,7 @@ class Category a => Arrow a where
 
 関数 `(->)` は `Arrow` のインスタンスなので、そのまま試せます。`arr` を確認します。
 
-```text:GHCi
+```hs:GHCi
 ghci> import Control.Arrow
 ghci> arr ((+ 1) :: Int -> Int) 1
 2
@@ -239,7 +239,7 @@ flowchart LR
     class x hidden
 ```
 
-```text:GHCi
+```hs:GHCi
 ghci> first ((+ 1) :: Int -> Int) (1, "x")
 (2,"x")
 ```
@@ -257,7 +257,7 @@ flowchart LR
     class x hidden
 ```
 
-```text:GHCi
+```hs:GHCi
 ghci> second ((+ 1) :: Int -> Int) ("x", 1)
 ("x",2)
 ```
@@ -273,7 +273,7 @@ flowchart LR
     end
 ```
 
-```text:GHCi
+```hs:GHCi
 ghci> (((+ 1) :: Int -> Int) *** show) (3, 4)
 (4,"4")
 ```
@@ -289,7 +289,7 @@ flowchart LR
     end
 ```
 
-```text:GHCi
+```hs:GHCi
 ghci> (((+ 1) :: Int -> Int) &&& (* 2)) 3
 (4,6)
 ```
