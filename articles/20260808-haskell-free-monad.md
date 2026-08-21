@@ -100,7 +100,7 @@ data Rose a = Leaf a | Node [Rose a]
 data Free f a = Pure a | Free (f (Free f a))
 ```
 
-コンストラクターが 2 つあるところは元の木と同じです。`Pure` が値を 1 つ持つ葉、`Free` が `f` という形で木を抱える枝です。`f` に `Two` や `[]` を入れると、元の木の枝に戻ります。
+データ構築子（コンストラクター）が 2 つあるところは元の木と同じです。`Pure` が値を 1 つ持つ葉、`Free` が `f` という形で木を抱える枝です。`f` に `Two` や `[]` を入れると、元の木の枝に戻ります。
 
 ||`Free`|`f = Two`|`f = []`|
 |---|---|---|---|
@@ -233,7 +233,7 @@ main = do
 ```
 :::
 
-`f` を `[]` に替えれば多分岐の木になります。`Free` と `Pure` をそのまま使うので、専用のコンストラクターは不要です。
+`f` を `[]` に替えれば多分岐の木になります。`Free` と `Pure` をそのまま使うので、専用のデータ構築子は不要です。
 
 ```hs
 type Rose = Free []
@@ -378,7 +378,7 @@ Free (fmap Pure c) = Free (Yield 1 (Pure ()))
 
 `Pure` で包みたい値は命令の中にあるので、直接は適用できません。そのために `fmap` で中まで届かせています。`Free` が受け取れるのは継続の位置に木が入った命令だけなので、先にその形へ整えてから被せる、という順序です。
 
-これを使って、コンストラクターを直接使う代わりの窓口となる関数を用意します。このように使いやすい形に整えて公開する関数を**スマートコンストラクター**と呼びます。
+これを使って、データ構築子を直接使う代わりの窓口となる関数を用意します。このように使いやすい形に整えて公開する関数を**スマートコンストラクター**と呼びます。
 
 ```hs
 type Gen o = Free (GenF o)
@@ -401,7 +401,7 @@ count = do
     yield 3
 ```
 
-この `count` は何もしません。`do` で書いてあっても実行されるわけではなく、正体はただのデータです。それを確かめるため、`Tree` のときと同じように `Show` インスタンスを書いて中身を覗きます。コンストラクターと同じ表記を出力する形にします。
+この `count` は何もしません。`do` で書いてあっても実行されるわけではなく、正体はただのデータです。それを確かめるため、`Tree` のときと同じように `Show` インスタンスを書いて中身を覗きます。データ構築子と同じ表記を出力する形にします。
 
 ```hs
 instance (Show o, Show a) => Show (Gen o a) where
@@ -785,7 +785,7 @@ Free モナドはこれのモナド版です。`>>=` は命令をつなぐだけ
 
 # free パッケージ
 
-ここまで `Free` を自分で定義してきましたが、実用では [free](https://hackage.haskell.org/package/free) パッケージを使います。[`Control.Monad.Free`](https://hackage.haskell.org/package/free/docs/Control-Monad-Free.html) の定義は、本記事で書いたものとコンストラクター名まで同じです。
+ここまで `Free` を自分で定義してきましたが、実用では [free](https://hackage.haskell.org/package/free) パッケージを使います。[`Control.Monad.Free`](https://hackage.haskell.org/package/free/docs/Control-Monad-Free.html) の定義は、本記事で書いたものとデータ構築子の名前まで同じです。
 
 ```hs
 data Free f a = Pure a | Free (f (Free f a))

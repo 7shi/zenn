@@ -156,7 +156,7 @@ data Union es a where
     There :: Union es a -> Union (e ': es) a
 ```
 
-GADT で書いています。前回と同じく、コンストラクターごとに戻り値の型を宣言する構文です。👉[Operationalモナド](https://zenn.dev/7shi/articles/20260809-haskell-operational-monad#命令の型を-gadt-で並べる)
+GADT で書いています。前回と同じく、データ構築子（コンストラクター）ごとに戻り値の型を宣言する構文です。👉[Operationalモナド](https://zenn.dev/7shi/articles/20260809-haskell-operational-monad#命令の型を-gadt-で並べる)
 
 - `Here` はリストの先頭の型 `e` の命令をそのまま包みます。
 - `There` は先頭以外のどこかにある命令を包みます。中身は 1 つ短いリストのユニオンです。
