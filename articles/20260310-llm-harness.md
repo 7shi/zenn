@@ -119,9 +119,9 @@ sequenceDiagram
     User->>Harness: (1)プロンプト
     Harness->>LLM: ツールリスト＋プロンプト
     LLM->>Harness: (2)ツール実行依頼
+    Harness->>Tool: ツール実行
     Tool->>User: (2')コマンド実行確認 [y/N]
     User->>Tool: 承認 (y)
-    Harness->>Tool: ツール実行
     Tool->>Harness: (3)実行結果
     Harness->>LLM: (3)実行結果
     LLM->>Harness: (4)最終回答
@@ -130,7 +130,7 @@ sequenceDiagram
 ```
 
 :::message
-ハーネスと LLM 間のフローは、手動でのユーザーと LLM 間のフローと同じ形をしています。
+ハーネスと LLM 間のフローは、（コマンド実行確認のやり取りを除けば）手動でのユーザーと LLM 間のフローと同じ形をしています。
 :::
 
 使用例：
