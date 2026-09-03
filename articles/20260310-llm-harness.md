@@ -25,7 +25,7 @@ published: true
 コーディングエージェントを構成するハーネスとは、具体的には以下の要素を指します。
 
 1.  LLM から呼び出すための「ツール（関数）」の定義
-2.  操作範囲を限定する「安全策（サンドボックス）」
+2.  操作範囲を限定する「安全策（サンドボックスやユーザー確認）」
 3.  それらを連続的に実行するための「ループ」
 
 ## 手動からツールコールへ
@@ -67,6 +67,12 @@ sequenceDiagram
 
 ツールの引数はすべて Python の型ヒントで定義されており、関数の冒頭には docstring で説明が書かれています。これらの情報は、LLM にツールの仕様を伝える際に利用されます。また、LLM は文字列として情報を受け取るため、ツールは「文字列を返す」ことを前提に設計します。
 
+:::message alert
+**安全性の確保：ユーザー確認の必要性**
+LLM にシェルコマンドの実行権限を無制限に与えると、誤認やハルシネーションによって予期しない破壊的コマンドを実行してしまう危険があります。
+簡易的なキーワードブロック（`dangerous` リスト）だけでは防ぎきれないため、コマンドを実行する前に必ずユーザーへ確認を求め、承認（y）を得られた場合のみ実行するようにします。
+:::
+
 ```python
 def bash(command: str) -> str:
     """
@@ -82,6 +88,13 @@ def bash(command: str) -> str:
     dangerous = ["rm -rf /", "sudo", "shutdown", "reboot", "> /dev/"]
     if any(d in command for d in dangerous):
         return "Error: Dangerous command blocked"
+    # 実行前にユーザーへ確認を求める
+    try:
+        confirm = input(f"Execute command? `{command}` [y/N]: ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        return "Error: Command execution canceled by user"
+    if confirm not in ("y", "yes"):
+        return "Error: Command execution canceled by user"
     try:
         # 指定されたコマンドをサブプロセスとして実行
         r = subprocess.run(command, shell=True, cwd=WORKDIR,
@@ -93,7 +106,7 @@ def bash(command: str) -> str:
         return "Error: Timeout (120s)"
 ```
 
-LLM は docstring に書かれている "Run a shell command." という情報を踏まえて、プロンプトの内容から「このタスクを達成するためにはシェルコマンドを実行する必要がある」と判断した場合、`bash` ツールを実行するよう依頼を返します。それを受け取ったハーネス側でツールを実行して結果を渡すことで、最終的な回答が得られます。
+LLM は docstring に書かれている "Run a shell command." という情報を踏まえて、プロンプトの内容から「このタスクを達成するためにはシェルコマンドを実行する必要がある」と判断した場合、`bash` ツールを実行するよう依頼を返します。ユーザーの承認を得た上でツールを実行して結果を渡すことで、最終的な回答が得られます。
 
 ```mermaid
 sequenceDiagram
@@ -106,6 +119,8 @@ sequenceDiagram
     User->>Harness: (1)プロンプト
     Harness->>LLM: ツールリスト＋プロンプト
     LLM->>Harness: (2)ツール実行依頼
+    Tool->>User: (2')コマンド実行確認 [y/N]
+    User->>Tool: 承認 (y)
     Harness->>Tool: ツール実行
     Tool->>Harness: (3)実行結果
     Harness->>LLM: (3)実行結果
@@ -125,6 +140,9 @@ sequenceDiagram
 ```
 ```text:(2)ツール実行依頼
 bash{'command': 'ls -la *.py'}
+```
+```text:(2')コマンド実行確認
+Execute command? `ls -la *.py` [y/N]: y
 ```
 ```text:(3)実行結果
 -rw-r--r-- 1 7shi 7shi 180  3月 10 20:01 greet.py
@@ -447,7 +465,7 @@ def agent_loop(messages: list):
 
 ここまで見てきたように、コーディングエージェントを実用的なものにしているのは、LLM の能力だけではなく、それを制御するハーネスの設計にあります。
 
-1.  **安全なツール設計**：`safe_path` などによって保護された関数群
+1.  **安全なツール設計**：`safe_path` やコマンド実行前のユーザー確認などによって保護された関数群
 2.  **自律的な駆動**：実行結果を自己フィードバックし、目的達成まで止まらない二重ループ構造
 3.  **疎結合な拡張性**：ディスパッチマップにより、ツールをいくつ追加してもメインループのコードが変わらない仕組み
 
