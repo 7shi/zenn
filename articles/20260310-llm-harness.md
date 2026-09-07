@@ -16,6 +16,50 @@ published: true
 本記事は Gemini CLI の生成結果をベースに編集しました。
 :::
 
+## 動作確認
+
+実際に動かしながら読み進めると理解が深まります。
+
+まず [Ollama](https://ollama.com) をインストールし、モデルを `pull` しておきます。モデルは以下の4つから選択することを推奨します。GPUがなくても動作しますが、目安としてメモリを「Size × 1.5」程度は確保してください。
+
+| モデル | サイズ | 備考 |
+|---|---:|---|
+| qwen3.8    | 17GB | 27B dense、最高品質、最も重い |
+| qwen3.6    | 23GB | 35B-A3B MoE、サイズの割に軽い |
+| qwen3.5:9b | 6.6GB  | より高速、より小さい |
+| qwen3.5:4b | 3.4GB  | 最速、最小 |
+
+```sh:例（マシンスペックに応じて選ぶ）
+ollama pull qwen3.5:4b
+```
+
+続いてリポジトリを取得します。
+
+```sh
+git clone https://github.com/7shi/learn-ollama-code
+cd learn-ollama-code
+uv sync
+cp .env.example .env
+```
+
+`.env` をエディタで開いて、選んだモデルを `MODEL_ID` に記述してください。
+
+プロジェクトルートを汚さないよう専用のサブディレクトリを作ってから実行します。
+
+```sh
+mkdir work
+cd work
+uv run ../agents/s02_tool_use.py
+```
+
+実行すればプロンプトの入力を求められます。例えば、以下のように入力します。
+
+```text
+s02 >> "Hello, World!"を出力するhello.pyというファイルを作成する
+```
+
+終了する場合は q [Enter] と入力します。
+
 ## コーディングエージェントとハーネス
 
 ユーザーの入力を受けて自律的に作業を行うシステムは、一般に「コーディングエージェント」と呼ばれます。しかし、その技術的な実態は、強力だが制御が難しい LLM を、現実の作業環境で安全かつ確実に動作させるための枠組みにあります。
@@ -89,12 +133,9 @@ def bash(command: str) -> str:
     if any(d in command for d in dangerous):
         return "Error: Dangerous command blocked"
     # 実行前にユーザーへ確認を求める
-    try:
-        confirm = input(f"Execute command? `{command}` [y/N]: ").strip().lower()
-    except (EOFError, KeyboardInterrupt):
-        return "Error: Command execution canceled by user"
-    if confirm not in ("y", "yes"):
-        return "Error: Command execution canceled by user"
+    confirm = input("Execute? [y/N]: ")
+    if confirm.strip().lower() not in ("y", "yes"):
+        return "Error: Command execution rejected by user"
     try:
         # 指定されたコマンドをサブプロセスとして実行
         r = subprocess.run(command, shell=True, cwd=WORKDIR,
@@ -142,16 +183,14 @@ sequenceDiagram
 bash{'command': 'ls -la *.py'}
 ```
 ```text:(2')コマンド実行確認
-Execute command? `ls -la *.py` [y/N]: y
+Execute? [y/N]: y
 ```
 ```text:(3)実行結果
--rw-r--r-- 1 7shi 7shi 180  3月 10 20:01 greet.py
--rw-r--r-- 1 7shi 7shi  23  3月 10 19:18 hello.py
+-rw-r--r-- 1 7shi 7shi 23  3月 10 19:18 hello.py
 ```
 ```text:(4)最終回答
 カレントディレクトリにあるPythonファイルは以下の通りです：
 
-- `greet.py` (180 bytes)
 - `hello.py` (23 bytes)
 ```
 
@@ -368,7 +407,7 @@ if __name__ == "__main__":
         try:
             # ユーザーからの入力を受け付ける
             query = input("s02 >> ")
-        except (EOFError, KeyboardInterrupt):
+        except EOFError:
             break
         # 終了コマンドのチェック
         if query.strip().lower() in ("q", "exit", ""):
