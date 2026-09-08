@@ -44,7 +44,7 @@ cp .env.example .env
 
 `.env` をエディタで開いて、選んだモデルを `MODEL_ID` に記述してください。
 
-プロジェクトルートを汚さないよう専用のサブディレクトリを作ってから実行します。
+プロジェクトルートを破壊しないように専用のサブディレクトリを作ってから実行します。
 
 ```sh
 mkdir work
@@ -55,7 +55,7 @@ uv run ../agents/s02_tool_use.py
 実行すればプロンプトの入力を求められます。例えば、以下のように入力します。
 
 ```text
-s02 >> "Hello, World!"を出力するhello.pyというファイルを作成する
+"Hello, World!"を出力するhello.pyというファイルを作成する
 ```
 
 終了する場合は q [Enter] と入力します。
@@ -408,6 +408,7 @@ if __name__ == "__main__":
             # ユーザーからの入力を受け付ける
             query = input("s02 >> ")
         except EOFError:
+            print()
             break
         # 終了コマンドのチェック
         if query.strip().lower() in ("q", "exit", ""):
@@ -416,12 +417,6 @@ if __name__ == "__main__":
         history.append({"role": "user", "content": query})
         # 内側のループ（エージェント作業）を開始
         agent_loop(history)
-        
-        # agent_loop が終わった後、最終的なテキスト回答（履歴の最後）を取得して表示
-        last = history[-1]
-        content = last.content if hasattr(last, "content") else last.get("content", "")
-        if content:
-            print(content)
         print()
 ```
 
@@ -463,11 +458,15 @@ TOOL_HANDLERS = {
 
 `tool_calls` の中身があればツールを実行してループを継続し、空であれば「最終的なテキスト回答が来た」と判断してループを終了します。
 
+:::message
+`stream_chat` は `client.chat` を `stream=True` でラップし、応答が到着するたびに逐次表示する関数です。ユーザーは回答が生成され切るまで待たされず、リアルタイムに出力を確認できます。
+:::
+
 ```python
 def agent_loop(messages: list):
     while True:
         # 推論：現在の履歴とツールの仕様を渡して LLM に判断させる
-        response = client.chat(
+        response = stream_chat(
             model=MODEL, messages=messages, tools=TOOLS, think=THINK,
         )
         # LLM の回答（アシスタントのターン）を履歴に追加
