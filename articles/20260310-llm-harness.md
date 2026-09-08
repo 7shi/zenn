@@ -513,6 +513,79 @@ def agent_loop(messages: list):
 
 https://github.com/7shi/learn-ollama-code
 
+## 付録：ツールコールの実態
+
+Ollama の `chat()` を使うと、ツールコールは `response.message.tool_calls` という構造化されたフィールドとして受け取れます。しかし、これは Ollama が裏側で解析した結果に過ぎません。LLM が実際に出力しているのはただのテキストであり、モデルごとに定められた「特殊タグ」の中にツール名や引数を埋め込んでいるだけです。
+
+これを直接確認するには、テンプレートやツール定義の自動変換を経由しない `/api/generate`（`raw: true`）を使い、生のプロンプトをモデルへそのまま渡します。qwen3.5 系のモデルは XML 形式（`<tool_call><function=名前><parameter=引数名>値</parameter></function></tool_call>`）でツールコールを学習しているため、システムプロンプトにツール定義とこのフォーマットを手動で記述してみます。
+
+```xml:prompt.txt
+<|im_start|>system
+You are Qwen, a helpful assistant.
+
+# Tools
+You have access to the following functions:
+
+<tools>
+<function>
+<name>bash</name>
+<description>Run a shell command.</description>
+<parameters>
+<parameter>
+<name>command</name>
+<type>string</type>
+<description>The shell command to execute</description>
+</parameter>
+</parameters>
+</function>
+</tools>
+
+If you choose to call a function ONLY reply in the following format:
+<tool_call>
+<function=example_function_name>
+<parameter=example_parameter_1>
+value_1
+</parameter>
+</function>
+</tool_call>
+<|im_end|>
+<|im_start|>user
+カレントディレクトリにあるファイルを一覧表示して。必ずbashツールを呼び出し、他の文章は書かないこと。<|im_end|>
+<|im_start|>assistant
+```
+
+`prompt.txt` の生テキストを `jq -Rs` で1つのJSON文字列に変換し、`model` などと合わせたJSONを組み立てて `curl` に渡します。
+
+```sh
+curl -s http://localhost:11434/api/generate -d "`jq -Rs '{model:"qwen3.5:4b", raw:true, stream:false, prompt:.}' prompt.txt`" | jq -r .response
+```
+
+出力：
+
+```xml
+<think>
+
+</think>
+
+<tool_call>
+<function=bash>
+<parameter=command>
+ls -la
+</parameter>
+</function>
+</tool_call>
+```
+
+`<tool_call>` を書きかけの状態でプロンプトに仕込むといった「呼び水」なしでも、モデルは `<think>` タグでの（空の）思考の直後、自発的に `<tool_call>` タグを書き始めています。システムプロンプトで示したフォーマット指示とツール定義だけで、モデルは学習時に見たとおりのタグ付きテキストを再現しているのです。
+
+`/api/chat` はこの生テキストを内蔵のパーサーで解析し、`<function=bash>` を `name: "bash"` に、`<parameter=command>ls -la</parameter>` を `arguments: {"command": "ls -la"}` に変換したうえで `tool_calls` フィールドへ格納しています。つまりツールコールの本質は、モデルが特殊タグでテキスト中に埋め込んだ「関数を呼びたい」という意図を、ランタイム（Ollama）やハーネス側が解釈して実行に結びつけているだけであり、LLM 自体が関数を実行しているわけではないことが、この実験からも分かります。
+
+:::message
+特殊タグの形式はモデルによって異なり、XML ではなく JSON を使うものもあります。
+
+Ollama は内部でエンジンとして llama.cpp を使っています。llama.cpp 自体は、モデルに付属する Jinja テンプレートをそのまま使ってプロンプトを組み立てる方式を採っています。それに対して、Ollama はこの部分を置き換え、モデルごとに専用の「レンダラー」と「パーサー」を内蔵し、差異を吸収した上で統一的な `tool_calls` フィールドを提供しています。
+:::
+
 ## 関連記事
 
 実装に見られるように、過去の履歴を毎回送信することで LLM はコンテキストを認識しています。LLM がその都度学習して内容を記憶しているわけではありません。この点を踏まえて、LLM の推論と記憶の関係について解説した記事です。
