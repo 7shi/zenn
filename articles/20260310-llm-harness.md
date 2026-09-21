@@ -598,6 +598,10 @@ https://qiita.com/7shi/items/e27866ce51c6b9a0f605
 
 ## 参考
 
+本記事で紹介した4種類のツール（bash、read_file、write_file、edit_file）と同様の最小限の構成を持つハーネス「Pi」が、コスト効率で優れているという研究結果を紹介するポストです。
+
+https://x.com/iwashi86/status/2101808623643197789
+
 以下で紹介させていただいた [laiso](https://x.com/laiso) さん、[azukiazusa](https://x.com/azukiazusa9) さん、[逆瀬川](https://x.com/gyakuse)さんは、レベルの高い記事を書いておられるので必見です。
 
 ### laiso さん
