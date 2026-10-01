@@ -293,8 +293,12 @@ v = v.reshape(seq_len, 12, 64).transpose(1, 0, 2)
 Q と K の内積で関連度を計算します。内積はベクトルが同じ方向を向いているほど大きくなるため、関連性の高いトークン同士ほどスコアが高くなります。次元数が大きいと内積の値が過大になるため、$\sqrt{d_k}$ でスケーリングします。
 
 ```python
-scores = q @ k.transpose(0, 2, 1) / np.sqrt(d_k)
+scores = q @ k.transpose(0, 2, 1) / math.sqrt(d_k)
 ```
+
+:::message
+`np.sqrt(d_k)` は `np.float64` のスカラーを返すため、float32 の配列を割ると結果が float64 に格上げされ、以降の計算が遅くなります。そこで Python 標準の `math.sqrt` を使っています（GELU の定数も同様）。
+:::
 
 ### 因果マスキングと Softmax
 
