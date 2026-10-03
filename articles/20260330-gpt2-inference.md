@@ -1058,47 +1058,7 @@ for _ in range(n_tokens_to_generate):
 The capital of France is the capital of the French Republic, and
 ```
 
-毎回入力全体をモデルに通し、最後のトークンの確率分布から次のトークンを選びます。なお、この素朴な実装では毎回全トークンを再計算しています。次のセクションで説明する KV キャッシュを使えば、新しいトークンの計算だけで済むようになります。
-
-# KV キャッシュ
-
-自己回帰生成では毎回全トークンを再計算しますが、Transformer Block の中で他のトークンを参照するのは Attention だけです。MLP・LayerNorm・Embedding・LM Head はすべてトークン単位の独立した処理です。さらに因果マスクにより過去のトークンの K, V は変わりません。そこで計算済みの K と V を保存しておき、新しいトークンの計算だけで済ませるのが **KV キャッシュ**です。
-
-- **Prefill**: 全プロンプトを処理して K, V をキャッシュに保存
-- **Incremental**: 新トークンのみ処理し、K, V をキャッシュに追加。新しいトークンの Q とキャッシュ全体の K でスコアを計算
-
-Attention の計算量は Q の長さ × K の長さに比例します。プロンプト 4 トークンから 3 トークンを生成する場合の計算量を比較すると：
-
-```text
-キャッシュなし（毎回全トークンを処理）:
-  4×4 + 5×5 + 6×6 + 7×7 = 126
-
-キャッシュあり（Prefill + 新トークンのみ処理）:
-  4×4 + 1×5 + 1×6 + 1×7 =  34
-```
-
-シーケンスが長くなるほど差は広がります。
-
-![KV キャッシュの有無による計算量の比較](/images/20260330-gpt2-inference/kv-cache.png)
-
-キャッシュなしでは毎回全トークンを処理するので、ステップが進むほど計算量が増えます（16 → 25 → 36 → 49、合計 126）。キャッシュありでは、最初のステップ（Prefill）だけが全トークン分で、以降は新しいトークン 1 つ分だけなので、5 → 6 → 7 と緩やかに増えます（合計 34）。
-
-```python
-# 確認: KV キャッシュありでも結果は同じ。2 回目以降は新しいトークンだけを処理する
-cached_ids = tokenizer.encode(text)
-kv_cache = None  # Prefill 前は None
-inputs = np.array(cached_ids)
-for _ in range(n_tokens_to_generate):
-    logits, kv_cache = model(inputs, kv_cache=kv_cache)
-    next_token = int(np.argmax(logits[-1, :]))
-    cached_ids.append(next_token)
-    inputs = np.array([next_token])  # 新トークンのみ
-print(cached_ids == input_ids)  # キャッシュなしの結果と一致
-```
-
-```text:実行結果
-True
-```
+毎回入力全体をモデルに通し、最後のトークンの確率分布から次のトークンを選びます。なお、この素朴な実装では毎回全トークンを再計算しています。後のセクションで説明する KV キャッシュを使えば、新しいトークンの計算だけで済むようになります。
 
 # まとめ
 
@@ -1152,6 +1112,53 @@ The capital of France is Auch. Its inhabitants are called Byz
 - **Step 5**: 最後のトークンのロジットを Softmax で確率にして、次のトークンを 1 つ選ぶ
 
 これを繰り返すだけで文章が生成されます。KV キャッシュは、このループの中で毎回やり直している計算を省く工夫です。
+
+# KV キャッシュ
+
+自己回帰生成では毎回全トークンを再計算しますが、Transformer Block の中で他のトークンを参照するのは Attention だけです。MLP・LayerNorm・Embedding・LM Head はすべてトークン単位の独立した処理です。さらに因果マスクにより過去のトークンの K, V は変わりません。そこで計算済みの K と V を保存しておき、新しいトークンの計算だけで済ませるのが **KV キャッシュ**です。
+
+- **Prefill**: 全プロンプトを処理して K, V をキャッシュに保存
+- **Incremental**: 新トークンのみ処理し、K, V をキャッシュに追加。新しいトークンの Q とキャッシュ全体の K でスコアを計算
+
+Attention の計算量は Q の長さ × K の長さに比例します。プロンプト 4 トークンから 3 トークンを生成する場合の計算量を比較すると：
+
+```text
+キャッシュなし（毎回全トークンを処理）:
+  4×4 + 5×5 + 6×6 + 7×7 = 126
+
+キャッシュあり（Prefill + 新トークンのみ処理）:
+  4×4 + 1×5 + 1×6 + 1×7 =  34
+```
+
+シーケンスが長くなるほど差は広がります。
+
+![KV キャッシュの有無による計算量の比較](/images/20260330-gpt2-inference/kv-cache.png)
+
+キャッシュなしでは毎回全トークンを処理するので、ステップが進むほど計算量が増えます（16 → 25 → 36 → 49、合計 126）。キャッシュありでは、最初のステップ（Prefill）だけが全トークン分で、以降は新しいトークン 1 つ分だけなので、5 → 6 → 7 と緩やかに増えます（合計 34）。
+
+```python
+# 確認: KV キャッシュありでも、キャッシュなしと同じ結果になる（貪欲法で比較）
+# キャッシュなし: 毎回すべてのトークンを処理する
+plain_ids = tokenizer.encode(text)
+for _ in range(n_tokens_to_generate):
+    logits = model(np.array(plain_ids))
+    plain_ids.append(int(np.argmax(logits[-1, :])))
+
+# キャッシュあり: 2 回目以降は新しいトークンだけを処理する
+cached_ids = tokenizer.encode(text)
+kv_cache = None  # Prefill 前は None
+inputs = np.array(cached_ids)
+for _ in range(n_tokens_to_generate):
+    logits, kv_cache = model(inputs, kv_cache=kv_cache)
+    next_token = int(np.argmax(logits[-1, :]))
+    cached_ids.append(next_token)
+    inputs = np.array([next_token])  # 新トークンのみ
+print(cached_ids == plain_ids)  # キャッシュなしの結果と一致
+```
+
+```text:実行結果
+True
+```
 
 # GPT-2 から現代の LLM へ
 
