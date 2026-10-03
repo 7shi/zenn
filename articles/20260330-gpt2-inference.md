@@ -46,16 +46,22 @@ GPT-2 は「次に来る単語を予測する」ことだけを学習した Base
 GPT-2 は主に英語のテキストで学習されたモデルです。プロンプト（書き出し）を与えて、続きを生成させてみましょう。
 
 ```bash
-uv run my-gpt2 "Once upon a time"
+uv run my-gpt2 "The capital of France is"
 ```
-> Once upon a time when no one could make impressions many people wished they had touched others who did. They stayed and drifted. Many don't even remember for years. One
+
+```text:実行結果
+The capital of France is Paris. Rodaining any part of Europe against a resurgent Italians, the former Belgian ruler, Napoleon II, who visited the Third Reich in September 1933, soon
+```
 
 英語ベースの GPT-2 はバイトレベル BPE により日本語の入力を受け付けますが、日本語として意味の通じる文章は生成できません。日本語を生成するには、日本語で学習された `rinna/japanese-gpt2-small` を `-m` オプションで指定します。モデル構造は GPT-2 と同一で、トークナイザーのみ SentencePiece に変更されています。
 
 ```bash
 uv run my-gpt2 -n 20 -m rinna/japanese-gpt2-small "吾輩は猫で"
 ```
-> 吾輩は猫で、子に親切にもした。 楽しげな娘を見るたびに、亡き妻が生きて
+
+```text:実行結果
+吾輩は猫で、子に親切にもした。 楽しげな娘を見るたびに、亡き妻が生きて
+```
 
 生成は確率的なため、実行するたびに異なる結果が得られます。以下のオプションで生成の振る舞いを調整できます。
 
@@ -131,7 +137,7 @@ print("text:", repr(text))
 print("input_ids:", [(tokenizer.decode([input_id]), input_id) for input_id in input_ids])
 ```
 
-```text
+```text:実行結果
 text: 'The capital of France is'
 input_ids: [('The', 464), (' capital', 3139), (' of', 286), (' France', 4881), (' is', 318)]
 ```
@@ -141,16 +147,20 @@ input_ids: [('The', 464), (' capital', 3139), (' of', 286), (' France', 4881), (
 vectorized_input_ids = wte[input_ids]
 indices = np.arange(len(input_ids))
 positional_info = wpe[indices]
-x = vectorized_input_ids + positional_info
+embedded_x = vectorized_input_ids + positional_info
 
+print("norm(vectorized_input_ids):", np.linalg.norm(vectorized_input_ids, axis=-1))
 print("indices:", indices)
-print("x (embedded input):", x)
-print("norm(x):", np.linalg.norm(x, axis=-1))
+print("norm(positional_info):", np.linalg.norm(positional_info, axis=-1))
+print("embedded_x (embedded input):", embedded_x)
+print("norm(embedded_x):", np.linalg.norm(embedded_x, axis=-1))
 ```
 
-```text
+```text:実行結果
+norm(vectorized_input_ids): [2.7202885 3.5120232 2.593625  3.3456771 2.6208987]
 indices: [0 1 2 3 4]
-x (embedded input): [[-0.08744361 -0.21771634  0.06849728 ...  0.02084289  0.01827967
+norm(positional_info): [9.875602  5.1921554 4.5852723 4.336398  4.181058 ]
+embedded_x (embedded input): [[-0.08744361 -0.21771634  0.06849728 ...  0.02084289  0.01827967
    0.0575971 ]
  [ 0.08123188 -0.06078904 -0.00345861 ...  0.07138121 -0.01634398
    0.06381062]
@@ -160,46 +170,48 @@ x (embedded input): [[-0.08744361 -0.21771634  0.06849728 ...  0.02084289  0.018
   -0.09647503]
  [-0.00208608 -0.01503893  0.1825352  ...  0.12296107 -0.02815152
   -0.03238926]]
-norm(x): [10.132026   6.2453856  5.2828484  5.5339622  4.9377227]
+norm(embedded_x): [10.132026   6.2453856  5.2828484  5.5339622  4.9377227]
 ```
 
 ```python
 # Step 2: Transformer Block × 12 — 文脈理解と特徴変換を繰り返す
-for block in blocks:
+x = embedded_x
+for i, block in enumerate(blocks, start=1):
     y = block.ln_1(x)  # 正規化
     y = block.attn(y)  # 文脈理解
     x = x + y          # 残差接続（加算）
     z = block.ln_2(x)  # 正規化
     z = block.mlp(z)   # 特徴変換
     x = x + z          # 残差接続（加算）
+    print(f"Block {i:2d} norm(x):", np.linalg.norm(x, axis=-1))
 
-print("x (after Transformer blocks):", x)
-print("norm(x):", np.linalg.norm(x, axis=-1))
+transformed_x = x
 ```
 
-```text
-x (after Transformer blocks): [[  0.05047503  -0.17276424  -0.16896883 ...  -1.0095907    0.12802455
-   -1.0686955 ]
- [-10.841122     3.4045794   -4.4607496  ...   2.7036042   -5.564179
-   -1.0109675 ]
- [  3.229121     2.565983     1.1017268  ...   2.8642154   -1.2396975
-   -0.40396878]
- [ -3.9180818   -0.24503696   0.4202696  ...   4.0475345   -5.226616
-   -4.1138935 ]
- [ -5.9840055    0.8471148   -2.269939   ...   3.7883925   -0.632723
-    1.0107007 ]]
-norm(x): [379.15237 353.52875 434.4936  377.96616 429.59772]
+```text:実行結果
+Block  1 norm(x): [132.81807   54.512966  53.544956  62.96802   56.50396 ]
+Block  2 norm(x): [636.23413   56.044376  52.209946  65.279526  55.198643]
+Block  3 norm(x): [2563.8425     64.019264   55.389412   71.36489    57.909107]
+Block  4 norm(x): [2748.1863     69.257      64.284706   73.93945    64.32445 ]
+Block  5 norm(x): [2897.091      74.0065     71.2963     81.639305   72.02934 ]
+Block  6 norm(x): [2990.528     82.38434   78.26472   91.10678   73.44182]
+Block  7 norm(x): [3046.459     91.79764   88.5002   105.46714   85.37166]
+Block  8 norm(x): [3080.1416    110.452095  101.314186  121.04741    99.59968 ]
+Block  9 norm(x): [3100.87     131.92361  126.56562  134.37976  127.16365]
+Block 10 norm(x): [3111.4104   151.63147  157.14001  147.09697  165.60622]
+Block 11 norm(x): [3112.4138   250.78304  289.7374   234.78941  289.94986]
+Block 12 norm(x): [379.15237 353.52875 434.4936  377.96616 429.59772]
 ```
 
 ```python
 # Step 3: 最終 LayerNorm — 出力前の正規化
-normed_x = ln_f(x)
+normed_x = ln_f(transformed_x)
 
 print("normed_x (after final LayerNorm):", normed_x)
 print("norm(normed_x):", np.linalg.norm(normed_x, axis=-1))
 ```
 
-```text
+```text:実行結果
 normed_x (after final LayerNorm): [[-0.04703779 -0.03328462 -0.1625836  ... -0.13365638 -0.05713072
   -0.10593727]
  [-1.1896409   0.40008634 -0.7317769  ...  0.22102492 -0.5071472
@@ -224,7 +236,7 @@ logits = normed_x @ wte.T
 print("logits:", logits)
 ```
 
-```text
+```text:実行結果
 logits: [[ -36.287464  -35.01145   -38.0794   ...  -40.5164    -41.376015
    -34.919384]
  [ -75.10218   -75.64832   -82.68278  ...  -82.59613   -79.39135
@@ -240,7 +252,7 @@ logits: [[ -36.287464  -35.01145   -38.0794   ...  -40.5164    -41.376015
 ```python
 # Step 5: サンプリング — 確率分布から次のトークンを選択
 probs = softmax(logits[-1])
-next_id = np.random.choice(len(probs), p=probs)
+next_id = np.random.choice(len(probs), p=probs)  # 乱数によって選択
 next_token = tokenizer.decode([int(next_id)])
 
 print("probs:", probs)
@@ -248,11 +260,11 @@ print("next_id:", next_id, "->", repr(next_token))
 print("updated text:", repr(text + next_token))
 ```
 
-```text
+```text:実行結果
 probs: [1.4029463e-05 1.4335123e-05 3.7383828e-07 ... 1.1836884e-09 2.1117333e-07
  3.3786766e-06]
-next_id: 783 -> ' now'
-updated text: 'The capital of France is now'
+next_id: 262 -> ' the'
+updated text: 'The capital of France is the'
 ```
 
 ```python
@@ -262,27 +274,27 @@ for _ in range(20):
     print("next_id:", next_id, "->", repr(tokenizer.decode([int(next_id)])))
 ```
 
-```text
-next_id: 6455 -> ' Bas'
-next_id: 2861 -> ' worth'
-next_id: 15142 -> ' Barcelona'
+```text:実行結果
+next_id: 4104 -> ' spread'
+next_id: 4346 -> ' football'
 next_id: 5140 -> ' located'
-next_id: 262 -> ' the'
-next_id: 262 -> ' the'
-next_id: 4881 -> ' France'
-next_id: 510 -> ' up'
-next_id: 4881 -> ' France'
-next_id: 1752 -> ' once'
-next_id: 3058 -> ' currently'
+next_id: 287 -> ' in'
+next_id: 319 -> ' on'
+next_id: 3222 -> ' demon'
+next_id: 379 -> ' at'
+next_id: 284 -> ' to'
+next_id: 991 -> ' still'
+next_id: 9281 -> ' Saint'
+next_id: 407 -> ' not'
 next_id: 6342 -> ' Paris'
-next_id: 262 -> ' the'
+next_id: 6974 -> ' merely'
+next_id: 11899 -> ' Marg'
+next_id: 4683 -> ' existing'
+next_id: 530 -> ' one'
+next_id: 4141 -> ' French'
+next_id: 22765 -> ' situated'
+next_id: 783 -> ' now'
 next_id: 1363 -> ' home'
-next_id: 4881 -> ' France'
-next_id: 9066 -> ' displayed'
-next_id: 1088 -> ' around'
-next_id: 663 -> ' its'
-next_id: 1363 -> ' home'
-next_id: 1180 -> ' different'
 ```
 
 以上が、GPT-2 の推論の全体です。入力テキスト `The capital of France is` を、トークン ID に変換し（Step 0）、ベクトルにして位置情報を加え（Step 1）、12 個の Transformer Block で文脈を取り込み（Step 2）、最終 LayerNorm で整え（Step 3）、全語彙とのロジットを計算し（Step 4）、最後のトークンのロジットから次のトークンを 1 つ選びます（Step 5）。
@@ -325,7 +337,7 @@ encoded = tokenizer.encode("Hello")
 print(repr("Hello"), "->", [(tokenizer.decode([i]), i) for i in encoded])
 ```
 
-```text
+```text:実行結果
 ('l', 'l') 41
 ('e', 'll') 439
 ('ell', 'o') 10853
@@ -361,13 +373,11 @@ best[4] = (-13.4308,  1, "日本語") ← "▁" + "日本語" が最適
 from my_gpt2.spiece import SentencePieceTokenizer
 
 sp = SentencePieceTokenizer("rinna/japanese-gpt2-small")
-print(sp._piece_to_score["▁"], sp._piece_to_score["日本語"])
-print([(i, sp._id_to_piece[i]) for i in sp.encode("日本語")])
+print([(i, piece := sp._id_to_piece[i], sp._piece_to_score[piece]) for i in sp.encode("日本語")])
 ```
 
-```text
--3.523782253265381 -9.907026290893555
-[(9, '▁'), (2481, '日本語')]
+```text:実行結果
+[(9, '▁', -3.523782253265381), (2481, '日本語', -9.907026290893555)]
 ```
 
 ## BPE と Unigram の比較
@@ -396,14 +406,20 @@ print([(i, sp._id_to_piece[i]) for i in sp.encode("日本語")])
 - **WPE（Word Position Embedding）**: 位置を区別するためのベクトルの行列。Attention は入力の順序に依存しないため、位置情報を明示的に与えなければ "I love you" と "you love I" を区別できません。形状 (1024, 768)
 
 ```python
-x = wte[input_ids] + wpe[np.arange(len(input_ids))]
+embedded_x = wte[input_ids] + wpe[np.arange(len(input_ids))]
 
 # 確認
-print(len(input_ids), wte.shape, wpe.shape, x.shape)
+print("input_ids:", [(tokenizer.decode([input_id]), input_id) for input_id in input_ids])
+print("wte.shape:", wte.shape)
+print("wpe.shape:", wpe.shape)
+print("embedded_x.shape:", embedded_x.shape)
 ```
 
-```text
-5 (50257, 768) (1024, 768) (5, 768)
+```text:実行結果
+input_ids: [('The', 464), (' capital', 3139), (' of', 286), (' France', 4881), (' is', 318)]
+wte.shape: (50257, 768)
+wpe.shape: (1024, 768)
+embedded_x.shape: (5, 768)
 ```
 
 連結（concatenate）ではなく加算にすることで次元を維持し、パラメータ数を抑えています。加算しても学習によって位置と意味が自然に分離されることが知られています。
@@ -432,40 +448,45 @@ Output
 ```
 
 ```python
-# 以降の引用コードは TransformerBlock クラスの中身なので、self を用意して動かす
-self = blocks[0]
-# 確認用に、ランダムなベクトルを入力する
-x = np.random.default_rng(0).standard_normal((5, 768), dtype=np.float32)
-print("入力:", x)
+# 入力を設定
+x = embedded_x
 
-x = x + self.attn(self.ln_1(x))
-x = x + self.mlp (self.ln_2(x))
+# 最初の TransformerBlock を選択
+block = blocks[0]
+
+y = block.ln_1(x)  # LayerNorm
+y = block.attn(y)  # Attention
+x = x + y          # 残差接続
+z = block.ln_2(x)  # LayerNorm
+z = block.mlp(z)   # MLP
+x = x + z          # 残差接続
 
 # 確認
+print("入力:", embedded_x)
 print("出力:", x)
 ```
 
-```text
-入力: [[ 1.117622   -1.3871249  -0.4265716  ... -1.2837367   1.8048477
-  -0.63249826]
- [-1.9112012  -0.9320151   3.0066628  ...  0.74511635 -0.25204748
-   0.03077996]
- [ 0.991117    0.18805751 -2.1592162  ... -1.4761438  -0.9891986
-   0.6017499 ]
- [-2.3152578  -0.8207919  -0.00496485 ... -0.7510275  -0.8909614
-  -0.72919315]
- [-0.9561185  -0.33976084 -0.5302373  ... -0.5043844  -1.2192814
-   0.6867705 ]]
-出力: [[ 10.925539    -7.940941     9.268362   ...  -2.6521013   -1.0350518
-   16.223198  ]
- [  8.24084     -9.016823     9.394821   ...  12.344389     1.4430909
-    8.572675  ]
- [  3.1729493  -11.184773     0.55789924 ... -10.40501     -3.4550288
-    1.8799427 ]
- [  0.70945024   1.8498049    0.22118524 ...   8.026867     6.813503
-   13.028902  ]
- [  9.754632    -3.6678193   -9.843023   ...  -2.448443    11.058816
-   18.826878  ]]
+```text:実行結果
+入力: [[-0.08744361 -0.21771634  0.06849728 ...  0.02084289  0.01827967
+   0.0575971 ]
+ [ 0.08123188 -0.06078904 -0.00345861 ...  0.07138121 -0.01634398
+   0.06381062]
+ [-0.05302825 -0.06650532  0.08784589 ... -0.04916734 -0.0737892
+  -0.09280714]
+ [-0.0697085  -0.02487532  0.2679732  ... -0.1384448   0.10769144
+  -0.09647503]
+ [-0.00208608 -0.01503893  0.1825352  ...  0.12296107 -0.02815152
+  -0.03238926]]
+出力: [[ 0.15586372 -0.79464614  0.39427605 ... -1.785389   -0.4688722
+   0.1554445 ]
+ [-2.2549133   0.25508872 -1.4544677  ...  0.84310216 -0.9556341
+   0.28696144]
+ [ 1.7354674   0.6284749   0.2901247  ... -0.63190275  0.37708288
+   0.3806891 ]
+ [-1.1095212   0.4702056   2.3944607  ...  0.38802794  1.2164162
+  -1.0964185 ]
+ [-1.0250714   0.44096607 -0.29540414 ...  0.9960766  -0.23786521
+   1.0540005 ]]
 ```
 
 各層は大まかに異なる抽象度の特徴を担っていると考えられています。
@@ -483,25 +504,43 @@ print("出力:", x)
 具体的には、各トークンのベクトル（768 次元）を**平均 0・分散 1** に正規化してから、学習済みパラメーター γ（スケール）と β（シフト）を適用します。
 
 ```python
-class LayerNorm:
-    def __call__(self, x, eps=1e-5):
-        mean = np.mean(x, axis=-1, keepdims=True)
-        variance = np.var(x, axis=-1, keepdims=True)
-        x_norm = (x - mean) / np.sqrt(variance + eps)
-        return self.g * x_norm + self.b  # γ でスケール、β でシフト
+# 入力を設定
+x = transformed_x
+
+# LayerNorm クラスの中身
+mean = np.mean(x, axis=-1, keepdims=True)       # 平均を計算
+variance = np.var(x, axis=-1, keepdims=True)    # 分散を計算
+x_norm = (x - mean) / np.sqrt(variance + 1e-5)  # 正規化
 
 # γ=1, β=0 なら正規化のみ。平均 0・分散 1 になる
-ln = LayerNorm()
-ln.g, ln.b = 1.0, 0.0
-y = ln(x)
-print("(平均, 分散):", list(zip(y.mean(axis=-1).round(3).tolist(), y.var(axis=-1).round(3).tolist())))
+g = 1.0
+b = 0.0
+normed_y = g * x_norm + b
+
+# 確認
+with np.printoptions(suppress=True):  # 指数表記にしない
+    print("入力 (平均, 分散):")
+    print(np.c_[x.mean(axis=-1), x.var(axis=-1)].round(3))
+    print("出力 (平均, 分散):")
+    print(np.c_[normed_y.mean(axis=-1), normed_y.var(axis=-1)].round(3))
 ```
 
-```text
-(平均, 分散): [(-0.0, 1.0), (-0.0, 1.0), (-0.0, 1.0), (0.0, 1.0), (-0.0, 1.0)]
+```text:実行結果
+入力 (平均, 分散):
+[[  0.521 186.911]
+ [  0.031 162.737]
+ [ -0.066 245.809]
+ [  0.002 186.014]
+ [  0.049 240.302]]
+出力 (平均, 分散):
+[[-0.  1.]
+ [ 0.  1.]
+ [-0.  1.]
+ [ 0.  1.]
+ [ 0.  1.]]
 ```
 
-出力は、正規化後の各トークン（5 個）の（平均, 分散）のタプルです。平均はほぼ 0（`-0.0` は 0 に近い小さな負の値の表示です）、分散はすべて 1 になっています。ここでは γ = 1、β = 0 としているので、正規化だけが行われた状態です。
+出力は、各トークン（5 個）の（平均, 分散）を 1 行ずつ並べた配列です。正規化前（入力）は平均も分散もトークンごとにばらばらですが、正規化後（出力）は平均がほぼ 0、分散がすべて 1 になっています。ここでは γ = 1、β = 0 としているので、正規化だけが行われた状態です。
 
 平均と分散の 2 つの数値だけでは、値の分布がどう変わるのかが分かりません。そこで、最初のトークンの 768 個の値を、正規化の前後でヒストグラムにして並べます。横軸は値、縦軸はその値の個数で、縦軸を揃えて比べます。横軸は揃えず、それぞれの範囲に合わせます。形が変わらずに、横軸の目盛りだけが変わる様子を見るためです。
 
@@ -511,7 +550,7 @@ print("(平均, 分散):", list(zip(y.mean(axis=-1).round(3).tolist(), y.var(axi
 
 ![LayerNorm の前後で最初のトークンの 768 個の値の分布を比べたヒストグラム](/images/20260330-gpt2-inference/ln-histogram.png)
 
-左は LayerNorm の前、右は後の、最初のトークンの 768 個の値の分布です。分布の形はほとんど変わりませんが、横軸の目盛りを見ると、スケールが変わっています（前: 平均 -0.07、標準偏差 10.21 → 後: 平均 -0.00、標準偏差 1.00）。LayerNorm は、値の相対的な大小関係を保ったまま、スケールだけを揃える処理だと分かります。
+左は LayerNorm の前、右は後の、最初のトークンの 768 個の値の分布です。分布の形はほとんど変わりませんが、横軸の目盛りを見ると、スケールが変わっています。LayerNorm は、値の相対的な大小関係を保ったまま、スケールだけを揃える処理だと分かります。
 
 正規化で全次元を同じスケールにした後、γ/β で必要なスケールの違いを復元します。GPT-2 全体で 25 回使用されます（12 ブロック × 2 + 最終 ln_f × 1）。
 
@@ -586,22 +625,32 @@ K と V は変えずに Q だけを変えても、取り出される情報が変
 
 以降のコードでは、動作を追いやすいように、ブロック 0 の Attention だけを取り出して動かします。ブロック 0 の入力は埋め込みそのもので、文脈はまだ取り込まれていません。後ろのブロックには、前のブロックで文脈が取り込まれたものが入力されるため、注目の傾向は層によって異なります。
 
-次のコードがこれらの処理です。
+次のコードは、埋め込み `embedded_x` をブロック 0 の LayerNorm（`ln_1`）に通したものを `x` として、ブロック 0 の Attention に渡し、Q・K・V をまとめて作る部分です。`w_qkv` と `b_qkv` は学習済みの重みとバイアスで、`x @ attn.w_qkv + attn.b_qkv` の 1 回の計算で、各トークンの 768 次元のベクトルが、Q・K・V を連結した 2304 次元のベクトルに変換されます。この段階ではまだ分割していないため、確認として形だけを表示します。
 
 ```python
-# 以降の引用コードは Attention クラスの中身なので、self を用意して動かす
-self = blocks[0].attn
-x = blocks[0].ln_1(wte[input_ids] + wpe[np.arange(len(input_ids))])  # Attention への入力（LayerNorm 後）
+# 入力を設定（ブロック 0 の LayerNorm を通した埋め込み）
+x = blocks[0].ln_1(embedded_x)
+
+# ブロック 0 の Attention を取り出す
+attn = blocks[0].attn
+
+# 以降の引用コードは Attention クラスの中身
 seq_len, embed_dim = x.shape
 
-print("x:  ", x.shape, "(トークン数, 埋め込み次元)")
+# (seq_len, 768) → (seq_len, 2304)
+qkv = x @ attn.w_qkv + attn.b_qkv
+
+# 確認
+print("x（トークン数, 埋め込み次元）:", x.shape)
+print("qkv:", qkv.shape, "(トークン数, Q・K・V を連結した次元)")
 ```
 
-```text
-x:   (5, 768) (トークン数, 埋め込み次元)
+```text:実行結果
+x（トークン数, 埋め込み次元）: (5, 768)
+qkv: (5, 2304) (トークン数, Q・K・V を連結した次元)
 ```
 
-次の `x @ self.w_qkv` の `@` は**行列積**です（ベクトルどうしの内積そのものではありません）。実際には、複数の内積を一括で計算するために行列積を使っています。
+`x @ attn.w_qkv` の `@` は**行列積**です。ベクトルどうしの内積そのものではありませんが、実際には、複数の内積を一括で計算するために行列積を使っています。
 
 `x` は形が `(トークン数, 768)` の行列で、1 行が 1 トークンのベクトルです。`w_qkv` は `(768, 2304)` の行列で、1 列が 768 個の重みを持つ 1 本のベクトルです。行列積 `A @ B` は、A の各行と B の各列の内積を、すべての組み合わせについて計算して並べる演算です。ここでの結果（`qkv`）は `(トークン数, 2304)` の行列で、`qkv[i, j]` は、i 番目のトークンのベクトルと、`w_qkv` の j 列目の内積になります。
 
@@ -646,17 +695,6 @@ $$
 つまり、ここでは「複数の内積を一括で計算する」ために、行列積を使っています。先ほどの Step 4 の `normed_x @ wte.T` も、以降の `@` も、ベクトルを並べた行列どうしの積として読みます。
 
 ```python
-# (seq_len, 768) → (seq_len, 2304)
-qkv = x @ self.w_qkv + self.b_qkv
-
-print("qkv:", qkv.shape, "(トークン数, Q・K・V を連結した次元)")
-```
-
-```text
-qkv: (5, 2304) (トークン数, Q・K・V を連結した次元)
-```
-
-```python
 # (seq_len, 2304) → (seq_len, 768) × 3 分割
 q, k, v = np.split(qkv, 3, axis=-1)
 # 各 (seq_len, 768) → (seq_len, 12, 64) → (12, seq_len, 64)
@@ -666,15 +704,15 @@ v = v.reshape(seq_len, 12, 64).transpose(1, 0, 2)
 d_k = q.shape[-1] # ヘッド当たりの次元数
 
 # 確認
-print("q:  ", q.shape, "(ヘッド数, トークン数, ヘッド当たりの次元数)")
-print("k:  ", k.shape, "(ヘッド数, トークン数, ヘッド当たりの次元数)")
-print("v:  ", v.shape, "(ヘッド数, トークン数, ヘッド当たりの次元数)")
+print("q（ヘッド数, トークン数, ヘッド当たりの次元数）:", q.shape)
+print("k（ヘッド数, トークン数, ヘッド当たりの次元数）:", k.shape)
+print("v（ヘッド数, トークン数, ヘッド当たりの次元数）:", v.shape)
 ```
 
-```text
-q:   (12, 5, 64) (ヘッド数, トークン数, ヘッド当たりの次元数)
-k:   (12, 5, 64) (ヘッド数, トークン数, ヘッド当たりの次元数)
-v:   (12, 5, 64) (ヘッド数, トークン数, ヘッド当たりの次元数)
+```text:実行結果
+q（ヘッド数, トークン数, ヘッド当たりの次元数）: (12, 5, 64)
+k（ヘッド数, トークン数, ヘッド当たりの次元数）: (12, 5, 64)
+v（ヘッド数, トークン数, ヘッド当たりの次元数）: (12, 5, 64)
 ```
 
 先ほどの出力のとおり、`qkv` は `(5, 2304)` で、Q・K・V を横に連結した形です。3 つの行列を別々に掛ける代わりに、連結した 1 つの行列 `w_qkv` を掛けて一括で計算し、あとから `np.split` で 3 等分しています。行列積 1 回で済むので、効率が良くなります。結果は同じです。
@@ -697,7 +735,7 @@ scores = q @ k.transpose(0, 2, 1) / math.sqrt(d_k)
 print(scores.shape)
 ```
 
-```text
+```text:実行結果
 (12, 5, 5)
 ```
 
@@ -761,7 +799,7 @@ out = probs @ v
 print(out.shape)
 ```
 
-```text
+```text:実行結果
 (12, 5, 64)
 ```
 
@@ -770,8 +808,8 @@ print(out.shape)
 最後に 12 ヘッドの結果を結合して 768 次元に戻し、出力射影を適用します。
 
 ```python
-out = out.transpose(1, 0, 2).reshape(seq_len, embed_dim)
-out = out @ self.w_out + self.b_out
+merged = out.transpose(1, 0, 2).reshape(seq_len, embed_dim)  # 12 ヘッドを結合
+proj = merged @ attn.w_out + attn.b_out                      # 出力射影
 
 # 最後のトークン（is）が、各ヘッドでどのトークンに最も注目しているか
 words = [tokenizer.decode([i]).strip() for i in input_ids]
@@ -779,10 +817,10 @@ for h in range(12):
     w = probs[h, -1]
     print(f"ヘッド {h:2d}: {words[w.argmax()]:8s} {w.max():.2f}")
 
-print(out.shape)  # 12 ヘッドを結合して射影: (seq_len, 768)
+print(proj.shape)  # 12 ヘッドを結合して射影: (seq_len, 768)
 ```
 
-```text
+```text:実行結果
 ヘッド  0: The      0.61
 ヘッド  1: is       0.98
 ヘッド  2: The      0.47
@@ -808,16 +846,50 @@ print(out.shape)  # 12 ヘッドを結合して射影: (seq_len, 768)
 
 `is` 自身に強く注目するヘッド（1, 3, 5 など）が右端に、`The` に注目するヘッドが左端に濃く出ています。
 
+## 残差接続
+
+Attention の出力は、そのまま次の処理に渡すのではなく、入力に**加算**します。`x = x + f(x)` という形で各処理の出力を元の入力に加算することを**残差接続**と呼びます。層の出力で上書きするのではなく「変更分を加える」構造です。これにより勾配消失を防ぎ、深いモデルでも学習が安定します。
+
+情報の流れとして見ると、`x` は情報の幹線（**残差ストリーム**）であり、Attention や MLP は幹線に情報を「追加」するだけです。初期の Embedding は最終層まで直接伝わります。
+
+GPT-2 は処理の**前**に LayerNorm を置く **Pre-LayerNorm** を採用しています。残差接続のパスがモデル全体を貫通するため、信号が深層まで伝わりやすくなります。
+
+ブロック 0 で、Attention の出力 `proj` を、Attention に入る前の入力 `embedded_x` に加算します。LayerNorm を通したのは Attention に渡した値だけで、加算する側は LayerNorm を通す前の `embedded_x` です。
+
+```python
+# Attention の出力を、入力（埋め込み）に加算する（残差接続）
+connected_x = embedded_x + proj
+
+# 確認
+print("embedded_x:", embedded_x.shape, "+ proj:", proj.shape, "->", connected_x.shape)
+print("norm(embedded_x):  ", np.linalg.norm(embedded_x, axis=-1))
+print("norm(proj):        ", np.linalg.norm(proj, axis=-1))
+print("norm(connected_x): ", np.linalg.norm(connected_x, axis=-1))
+```
+
+```text:実行結果
+embedded_x: (5, 768) + proj: (5, 768) -> (5, 768)
+norm(embedded_x):   [10.132026   6.2453856  5.2828484  5.5339622  4.9377227]
+norm(proj):         [22.145576 31.166588 27.412516 34.03442  28.357483]
+norm(connected_x):  [26.79642  32.713398 28.624733 34.710682 29.221094]
+```
+
+出力の 1 行目は形で、`embedded_x` と `proj` はどちらも `(5, 768)` なので、そのまま加算できます。加算しても形は変わりません。
+
+2 行目以降は、各トークンのベクトルの大きさ（ノルム）です。ここではブロック 0 の一例ですが、`proj`（Attention の出力）の大きさは `embedded_x`（元の埋め込み）より大きく、Attention が幹線に加える変更は小さくないことが分かります。それでも、元の埋め込みは加算によって `connected_x` に残っています。
+
 ## MLP
 
 各トークンを**独立に**処理する特徴変換です。Attention が「トークン間の情報伝達」（横方向）なら、MLP は「トークン単体の意味の深掘り」（縦方向）です。Attention は情報を集約しますが、集めた情報を「解釈」する処理は行いません。MLP がその役割を担います。
 
 768 次元のベクトルを一度 4 倍の 3072 次元に拡張し、非線形変換してから元の 768 次元に圧縮します。高次元空間で多くの特徴を同時に表現し、非線形変換で選別するという仕組みです。
 
+MLP への入力は、残差接続で Attention の出力を加算した `connected_x` に、2 つ目の LayerNorm（`ln_2`）を適用した値です。
+
 ```python
 # 以降の引用コードは MLP クラスの中身なので、self を用意して動かす
 self = blocks[0].mlp
-x = blocks[0].ln_2(wte[input_ids] + wpe[np.arange(len(input_ids))])  # MLP への入力（LayerNorm 後）
+x = blocks[0].ln_2(connected_x)  # MLP への入力（残差接続の結果に LayerNorm を適用）
 
 i = x @ self.w_fc + self.b_fc         # 768 → 3072（4倍に拡張）
 a = gelu(i)                           # 非線形変換（活性化関数）
@@ -838,22 +910,22 @@ for word, count in zip(words, (gelu(i) > 0.1).sum(axis=-1)):
     print(f"{word:8s} {count}")
 ```
 
-```text
+```text:実行結果
 (5, 768) -> (5, 3072) -> (5, 768)
-i: [-0.794 -1.482 -2.489  0.576  1.839  0.305 -2.95   0.436]
-a: [-0.17  -0.103 -0.015  0.414  1.779  0.189 -0.004  0.291]
-The      153
-capital  552
-of       199
-France   748
-is       203
+i: [ 0.396 -1.109 -1.302 -0.042  0.222 -0.199 -1.112 -0.74 ]
+a: [ 0.259 -0.148 -0.126 -0.02   0.131 -0.084 -0.148 -0.17 ]
+The      133
+capital  271
+of       181
+France   444
+is       183
 ```
 
 出力の 1 行目は、次元の流れ（768 → 3072 → 768）です。MLP は一度 4 倍に広げてから、元の次元に戻します。
 
-2 行目と 3 行目は、`France` の最初の 8 次元を、GELU の前（`i`）と後（`a`）で比べたものです。大きな正の値はほぼそのまま通ります（`1.839 → 1.779`）。小さな正の値は少し小さくなり（`0.576 → 0.414`）、負の値は 0 に近づきます（`-2.489 → -0.015`、`-2.95 → -0.004`）。
+2 行目と 3 行目は、`France` の最初の 8 次元を、GELU の前（`i`）と後（`a`）で比べたものです。正の値は少し小さくなり（`0.396 → 0.259`、`0.222 → 0.131`）、負の値は 0 に近づきます（`-1.302 → -0.126`、`-1.109 → -0.148`）。
 
-最後の数値は、3072 個の特徴のうち、GELU の後に 0.1 を超えて残った個数です。`The` は 153 個、`France` は 748 個で、どのトークンでも全体の数 % から 25 % ほどしか残りません。残りの大半は GELU で抑制され、トークンごとに違う一部の特徴だけが選ばれています。内容語の `capital` と `France` は、`The` や `of`、`is` より多く残っています。ここではブロック 0 の一例で、0.1 という閾値も目安です。
+最後の数値は、3072 個の特徴のうち、GELU の後に 0.1 を超えて残った個数です。`The` は 133 個、`France` は 444 個で、どのトークンでも全体の数 % から 15 % ほどしか残りません。残りの大半は GELU で抑制され、トークンごとに違う一部の特徴だけが選ばれています。内容語の `capital` と `France` は、`The` や `of`、`is` より多く残っています。ここではブロック 0 の一例で、0.1 という閾値も目安です。
 
 ### GELU
 
@@ -864,7 +936,7 @@ samples = np.array([-3, -1, 0, 1, 3], dtype=np.float32)
 print(samples, "->", gelu(samples))
 ```
 
-```text
+```text:実行結果
 [-3. -1.  0.  1.  3.] -> [-0.00363734 -0.158808    0.          0.841192    2.9963627 ]
 ```
 
@@ -876,13 +948,31 @@ print(samples, "->", gelu(samples))
 
 正の側では直線 `y = x` にほぼ重なります。負の側では 0 に向かって曲がり、`-1` 付近でわずかに負の値を取ったあと、0 に近づきます。0 付近ではなめらかに折れ曲がっています。このように直線ではない（非線形）ことが、層を重ねても全体が 1 つの線形変換に潰れない理由です。
 
-## 残差接続
+### MLP の残差接続
 
-`x = x + f(x)` という形で各処理の出力を元の入力に加算することを**残差接続**と呼びます。層の出力で上書きするのではなく「変更分を加える」構造です。これにより勾配消失を防ぎ、深いモデルでも学習が安定します。
+MLP の出力も、Attention と同じく残差接続で幹線に加算します。加算する相手は、LayerNorm を通した `x` ではなく、通す前の `connected_x`（Attention の残差接続の結果）です。これでブロック 0 の処理が完結します。
 
-情報の流れとして見ると、`x` は情報の幹線（**残差ストリーム**）であり、Attention や MLP は幹線に情報を「追加」するだけです。初期の Embedding は最終層まで直接伝わります。
+```python
+# MLP の出力を、LayerNorm を通す前の connected_x に加算する（残差接続）
+block_out = connected_x + out
 
-GPT-2 は処理の**前**に LayerNorm を置く **Pre-LayerNorm** を採用しています。残差接続のパスがモデル全体を貫通するため、信号が深層まで伝わりやすくなります。
+# 確認
+print("norm(connected_x):", np.linalg.norm(connected_x, axis=-1))
+print("norm(out):        ", np.linalg.norm(out, axis=-1))
+print("norm(block_out):  ", np.linalg.norm(block_out, axis=-1))
+print("ブロック 0 の出力と一致:", np.allclose(block_out, blocks[0](embedded_x), atol=1e-4))
+```
+
+```text:実行結果
+norm(connected_x): [26.79642  32.713398 28.624733 34.710682 29.221094]
+norm(out):         [124.380875  30.390959  30.005434  35.954567  32.879833]
+norm(block_out):   [132.81807   54.512966  53.544956  62.96802   56.50396 ]
+ブロック 0 の出力と一致: True
+```
+
+出力の 1 行目から 3 行目は、`connected_x`、MLP の出力 `out`、加算後の `block_out` の、各トークンのベクトルの大きさ（ノルム）です。MLP の出力も `connected_x` と同程度か、それ以上の大きさがあり、特に最初のトークン `The` では `out` が大きくなっています。それでも、加算なので `connected_x` の内容は `block_out` に残っています。
+
+最後の行は、この `block_out` が、`blocks[0](embedded_x)`（TransformerBlock をそのまま実行した結果）と一致していることの確認です。ここまでで、ブロック 0 の「LayerNorm → Attention → 残差接続 → LayerNorm → MLP → 残差接続」が、順に確認できました。この出力が、ブロック 1 の入力になります。
 
 ## 文脈付き埋め込み
 
@@ -908,7 +998,7 @@ for t in np.argsort(logits[-1])[::-1][:5]:
     print(repr(tokenizer.decode([int(t)])), logits[-1, t])
 ```
 
-```text
+```text:実行結果
 ' the' -100.2498
 ' now' -100.81753
 ' a' -100.8555
@@ -938,7 +1028,7 @@ for T in [0.5, 1, 2]:
     print(f"T = {T}: 上位 10 件の確率の合計 {p[top].sum():.2f}")
 ```
 
-```text
+```text:実行結果
 T = 0.5: 上位 10 件の確率の合計 0.91
 T = 1: 上位 10 件の確率の合計 0.36
 T = 2: 上位 10 件の確率の合計 0.03
@@ -956,17 +1046,16 @@ GPT-2 は一度に 1 トークンずつ予測します。予測したトーク�
 input_ids = tokenizer.encode(text)
 n_tokens_to_generate = 8
 
+print(text, end="")
 for _ in range(n_tokens_to_generate):
     logits = model(np.array(input_ids))
     next_token = int(np.argmax(logits[-1, :]))
     input_ids.append(next_token)
-
-# 確認
-print(repr(tokenizer.decode(input_ids)))
+    print(tokenizer.decode([next_token]), end="", flush=True)  # 生成したトークンから順に表示
 ```
 
-```text
-'The capital of France is the capital of the French Republic, and'
+```text:実行結果
+The capital of France is the capital of the French Republic, and
 ```
 
 毎回入力全体をモデルに通し、最後のトークンの確率分布から次のトークンを選びます。なお、この素朴な実装では毎回全トークンを再計算しています。次のセクションで説明する KV キャッシュを使えば、新しいトークンの計算だけで済むようになります。
@@ -1007,7 +1096,7 @@ for _ in range(n_tokens_to_generate):
 print(cached_ids == input_ids)  # キャッシュなしの結果と一致
 ```
 
-```text
+```text:実行結果
 True
 ```
 
@@ -1051,8 +1140,8 @@ for _ in range(n_tokens_to_generate):
     print(tokenizer.decode([int(next_id)]), end="", flush=True)  # 生成したトークンから順に表示
 ```
 
-```text
-The capital of France is somewhat close to Freedom City and in 2010
+```text:実行結果
+The capital of France is Auch. Its inhabitants are called Byz
 ```
 
 各ステップの役割は、次のとおりです。
@@ -1077,5 +1166,15 @@ GPT-2 のアーキテクチャは現代の LLM の基本形です。本質的な
 | 正規化 | LayerNorm | RMSNorm |
 | 活性化関数 | GELU | SwiGLU |
 | Attention | 標準 MHA | GQA / MLA |
+
+表に出てきた用語を簡単に説明します。
+
+| 用語 | 正式名称 | 概要 |
+|---|---|---|
+| RoPE | Rotary Position Embedding | 位置情報を、埋め込みに足す代わりに、Q と K のベクトルを位置に応じた角度だけ回転させて与える。回転後の内積が相対的な位置関係に依存するため、長い文脈に拡張しやすい |
+| RMSNorm | Root Mean Square Normalization | LayerNorm から平均を引く処理とバイアス β を省き、二乗平均平方根（RMS）で割ってスケール γ を掛けるだけにした正規化。計算が軽い |
+| SwiGLU | Swish-Gated Linear Unit | MLP の活性化の一種。入力を 2 つに射影し、一方に Swish（SiLU）関数を適用してゲートとし、もう一方と要素ごとに掛ける。GELU の MLP より性能が良いとされる |
+| GQA | Grouped-Query Attention | 標準の MHA（Multi-Head Attention）では全ヘッドが独自の K, V を持つが、GQA では複数の Q ヘッドで 1 組の K, V を共有する。KV キャッシュが小さくなる |
+| MLA | Multi-head Latent Attention | K, V を低次元の潜在ベクトルに圧縮して保存し、使うときに復元する。GQA よりもさらに KV キャッシュを小さくできる（DeepSeek で採用） |
 
 構造の違いは効率やスケーラビリティの改善であり、「残差ストリーム上で Attention と MLP を繰り返す」という根本的な設計は共通しています。GPT-2 で理解した原理は、そのまま現代の LLM にも応用できます。
