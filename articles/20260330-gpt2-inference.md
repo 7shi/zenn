@@ -250,7 +250,7 @@ logits: [[ -36.287464  -35.01145   -38.0794   ...  -40.5164    -41.376015
 ```
 
 ```python
-# Step 5: サンプリング — 確率分布から次のトークンを選択
+# Step 5: サンプリング — 最後のトークンのロジットから次のトークンを確率的に選択
 probs = softmax(logits[-1])
 next_id = np.random.choice(len(probs), p=probs)  # 乱数によって選択
 next_token = tokenizer.decode([int(next_id)])
@@ -263,8 +263,8 @@ print("updated text:", repr(text + next_token))
 ```text:実行結果
 probs: [1.4029463e-05 1.4335123e-05 3.7383828e-07 ... 1.1836884e-09 2.1117333e-07
  3.3786766e-06]
-next_id: 262 -> ' the'
-updated text: 'The capital of France is the'
+next_id: 6342 -> ' Paris'
+updated text: 'The capital of France is Paris'
 ```
 
 ```python
@@ -1049,13 +1049,16 @@ n_tokens_to_generate = 8
 print(text, end="")
 for _ in range(n_tokens_to_generate):
     logits = model(np.array(input_ids))
-    next_token = int(np.argmax(logits[-1, :]))
-    input_ids.append(next_token)
-    print(tokenizer.decode([next_token]), end="", flush=True)  # 生成したトークンから順に表示
+    probs = softmax(logits[-1])
+    next_id = np.random.choice(len(probs), p=probs)  # 乱数によって選択
+    input_ids.append(next_id)
+
+    # 生成したトークンを表示
+    print(tokenizer.decode([next_id]), end="", flush=True)
 ```
 
 ```text:実行結果
-The capital of France is the capital of the French Republic, and
+The capital of France is Beingchurati Hills. But they
 ```
 
 毎回入力全体をモデルに通し、最後のトークンの確率分布から次のトークンを選びます。なお、この素朴な実装では毎回全トークンを再計算しています。後のセクションで説明する KV キャッシュを使えば、新しいトークンの計算だけで済むようになります。
@@ -1091,9 +1094,9 @@ for _ in range(n_tokens_to_generate):
     # Step 4: LM Head — 全語彙の埋め込みベクトルとの内積（ロジット）を一括計算
     logits = x @ wte.T
 
-    # Step 5: サンプリング — 最後のトークンのロジットから次のトークンを選択
+    # Step 5: サンプリング — 最後のトークンのロジットから次のトークンを確率的に選択
     probs = softmax(logits[-1])
-    next_id = np.random.choice(len(probs), p=probs)
+    next_id = np.random.choice(len(probs), p=probs)  # 乱数によって選択
 
     # 選んだトークンを入力に追加して繰り返す（自己回帰生成）
     input_ids.append(int(next_id))
@@ -1101,7 +1104,7 @@ for _ in range(n_tokens_to_generate):
 ```
 
 ```text:実行結果
-The capital of France is Auch. Its inhabitants are called Byz
+The capital of France is ridden by a school of 300, with
 ```
 
 各ステップの役割は、次のとおりです。
