@@ -114,8 +114,9 @@ safetensors 形式（約 523 MB）で格納されています。768 は埋め込
 
 推論パイプラインの中核は以下のステップに集約されます。
 
+以降のコードを動かすための準備です（このリポジトリの `my_gpt2` を使用します）。
+
 ```python
-# 以降のコードを動かすための準備（このリポジトリの my_gpt2 を使用）
 import math
 import numpy as np
 from my_gpt2.tokenizer import Tokenizer
@@ -128,8 +129,9 @@ model = load_gpt2_weights(model_id)
 wte, wpe, ln_f, blocks = model.wte, model.wpe, model.ln_f, model.blocks
 ```
 
+**Step 0: トークナイザー** — テキストをトークン ID の列に変換します。
+
 ```python
-# Step 0: トークナイザー — テキストをトークンIDの列に変換
 text = "The capital of France is"
 input_ids = tokenizer.encode(text)
 
@@ -142,8 +144,9 @@ text: 'The capital of France is'
 input_ids: [('The', 464), (' capital', 3139), (' of', 286), (' France', 4881), (' is', 318)]
 ```
 
+**Step 1: Embedding** — トークン ID をベクトルに変換し、位置情報を加算します。
+
 ```python
-# Step 1: Embedding — トークンIDをベクトルに変換し、位置情報を加算
 vectorized_input_ids = wte[input_ids]
 indices = np.arange(len(input_ids))
 positional_info = wpe[indices]
@@ -173,8 +176,9 @@ embedded_x (embedded input): [[-0.08744361 -0.21771634  0.06849728 ...  0.020842
 norm(embedded_x): [10.132026   6.2453856  5.2828484  5.5339622  4.9377227]
 ```
 
+**Step 2: Transformer Block × 12** — 文脈理解と特徴変換を繰り返します。
+
 ```python
-# Step 2: Transformer Block × 12 — 文脈理解と特徴変換を繰り返す
 x = embedded_x
 for i, block in enumerate(blocks, start=1):
     y = block.ln_1(x)  # 正規化
@@ -203,8 +207,9 @@ Block 11 norm(x): [3112.4138   250.78304  289.7374   234.78941  289.94986]
 Block 12 norm(x): [379.15237 353.52875 434.4936  377.96616 429.59772]
 ```
 
+**Step 3: 最終 LayerNorm** — 出力前の正規化です。
+
 ```python
-# Step 3: 最終 LayerNorm — 出力前の正規化
 normed_x = ln_f(transformed_x)
 
 print("normed_x (after final LayerNorm):", normed_x)
@@ -229,8 +234,9 @@ norm(normed_x): [ 78.14827 183.76552 182.14905 202.76149 255.3541 ]
 
 行列積の仕組みは、Attention の「Q, K, V への変換」で改めて説明します。ここでは、複数の内積をまとめて計算していると読んでください。
 
+**Step 4: LM Head** — 全語彙の埋め込みベクトルとの内積（ロジット）を一括計算します。
+
 ```python
-# Step 4: LM Head — 全語彙の埋め込みベクトルとの内積（ロジット）を一括計算
 logits = normed_x @ wte.T
 
 print("logits:", logits)
@@ -249,8 +255,9 @@ logits: [[ -36.287464  -35.01145   -38.0794   ...  -40.5164    -41.376015
   -110.37789 ]]
 ```
 
+**Step 5: サンプリング** — 最後のトークンのロジットから次のトークンを確率的に選択します。
+
 ```python
-# Step 5: サンプリング — 最後のトークンのロジットから次のトークンを確率的に選択
 probs = softmax(logits[-1])
 next_id = np.random.choice(len(probs), p=probs)  # 乱数によって選択
 next_token = tokenizer.decode([int(next_id)])
@@ -267,8 +274,9 @@ next_id: 6342 -> ' Paris'
 updated text: 'The capital of France is Paris'
 ```
 
+どのようなトークンが選ばれるか、同じ位置で 20 回サンプリングを繰り返します。
+
 ```python
-# 20 回サンプリングを繰り返す
 for _ in range(20):
     next_id = np.random.choice(len(probs), p=probs)
     print("next_id:", next_id, "->", repr(tokenizer.decode([int(next_id)])))
