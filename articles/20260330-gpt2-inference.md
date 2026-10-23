@@ -274,40 +274,40 @@ next_id: 6342 -> ' Paris'
 updated text: 'The capital of France is Paris'
 ```
 
-どのようなトークンが選ばれるか、同じ位置で 20 回サンプリングを繰り返します。
+どのようなトークンが選ばれやすいか、確率の上位 20 候補を表示します。
 
 ```python
-for _ in range(20):
-    next_id = np.random.choice(len(probs), p=probs)
-    print("next_id:", next_id, "->", repr(tokenizer.decode([int(next_id)])))
+# 確率の上位 20 候補
+for i, t in enumerate(np.argsort(probs)[::-1][:20], start=1):
+    print(f"{i:2d}. {probs[t]:.4f}", repr(tokenizer.decode([int(t)])))
 ```
 
 ```text:実行結果
-next_id: 4104 -> ' spread'
-next_id: 4346 -> ' football'
-next_id: 5140 -> ' located'
-next_id: 287 -> ' in'
-next_id: 319 -> ' on'
-next_id: 3222 -> ' demon'
-next_id: 379 -> ' at'
-next_id: 284 -> ' to'
-next_id: 991 -> ' still'
-next_id: 9281 -> ' Saint'
-next_id: 407 -> ' not'
-next_id: 6342 -> ' Paris'
-next_id: 6974 -> ' merely'
-next_id: 11899 -> ' Marg'
-next_id: 4683 -> ' existing'
-next_id: 530 -> ' one'
-next_id: 4141 -> ' French'
-next_id: 22765 -> ' situated'
-next_id: 783 -> ' now'
-next_id: 1363 -> ' home'
+ 1. 0.0846 ' the'
+ 2. 0.0479 ' now'
+ 3. 0.0462 ' a'
+ 4. 0.0324 ' France'
+ 5. 0.0322 ' Paris'
+ 6. 0.0266 ' in'
+ 7. 0.0264 ' also'
+ 8. 0.0238 ' not'
+ 9. 0.0233 ' home'
+10. 0.0155 ' still'
+11. 0.0142 ' under'
+12. 0.0139 ' located'
+13. 0.0134 ' on'
+14. 0.0113 ' one'
+15. 0.0094 ' known'
+16. 0.0087 ' at'
+17. 0.0080 ' an'
+18. 0.0076 ' being'
+19. 0.0068 ' already'
+20. 0.0047 ' to'
 ```
 
 以上が、GPT-2 の推論の全体です。入力テキスト `The capital of France is` を、トークン ID に変換し（Step 0）、ベクトルにして位置情報を加え（Step 1）、12 個の Transformer Block で文脈を取り込み（Step 2）、最終 LayerNorm で整え（Step 3）、全語彙とのロジットを計算し（Step 4）、最後のトークンのロジットから次のトークンを 1 つ選びます（Step 5）。
 
-Step 5 はサンプリングなので、同じ入力でも実行のたびに結果が変わります。20 回繰り返しても、確率の高いトークンが繰り返し選ばれる一方で、毎回同じにはなりません。ここで得られるのは次の 1 トークンだけで、文章を生成するには、選んだトークンを入力に追加して、この処理を繰り返します（自己回帰生成、後述）。
+Step 5 はサンプリングなので、同じ入力でも実行のたびに結果が変わります。確率の高いトークンほど選ばれやすいものの、上位の候補でも確率はそれほど高くなく、毎回同じにはなりません。ここで得られるのは次の 1 トークンだけで、文章を生成するには、選んだトークンを入力に追加して、この処理を繰り返します（自己回帰生成、後述）。
 
 以降の節では、このパイプラインを入力側から順に、各ステップの中身を見ていきます。
 
