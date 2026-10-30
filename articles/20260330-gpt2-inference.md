@@ -277,7 +277,6 @@ updated text: 'The capital of France is Paris'
 どのようなトークンが選ばれやすいか、確率の上位 20 候補を表示します。
 
 ```python
-# 確率の上位 20 候補
 for i, t in enumerate(np.argsort(probs)[::-1][:20], start=1):
     print(f"{i:2d}. {probs[t]:.4f}", repr(tokenizer.decode([int(t)])))
 ```
@@ -414,7 +413,7 @@ print([(i, piece := sp._id_to_piece[i], sp._piece_to_score[piece]) for i in sp.e
 
 # Embedding
 
-トークン ID（整数）をベクトル（数値のリスト）に変換するステップです。GPT-2 では「単語の意味」と「位置情報」の 2 つのベクトルを足し合わせます。
+トークン ID（整数）をベクトル（数値のリスト）に変換するステップです。GPT-2 では「トークンの意味」と「位置情報」の 2 つのベクトルを足し合わせます。
 
 - **WTE（Word Token Embedding）**: 語彙中の各トークンに対応する埋め込みベクトルを格納した行列。トークン ID で行を取り出すと、そのトークンの意味ベクトルが得られます。形状 (50257, 768)
 - **WPE（Word Position Embedding）**: 位置を区別するためのベクトルの行列。Attention は入力の順序に依存しないため、位置情報を明示的に与えなければ "I love you" と "you love I" を区別できません。形状 (1024, 768)
@@ -437,6 +436,50 @@ embedded_x.shape: (5, 768)
 ```
 
 連結（concatenate）ではなく加算にすることで次元を維持し、パラメータ数を抑えています。加算しても学習によって位置と意味が自然に分離されることが知られています。
+
+## WTE（トークン埋め込み）
+
+`wte` の各行は、トークン ID に対応する 768 次元のベクトルです。学習の結果、意味が近いトークンは近い向きのベクトルになり、さらに意味の関係がベクトルの足し引きとして現れることが知られています。有名な例が、`king` から `man` を引いて `woman` を足すと `queen` に近づく、という類推です。実際に確かめてみます。
+
+GPT-2 の語彙には、同じ単語でも語頭にスペースが付いた ` king` と、付かない `king` が別々のトークンとして存在します。スペース付きの方が文中での出現数が多く、単語としての意味が安定したベクトルになりやすいので、ここではスペース付きで指定します。スペースの有無で ID も別になるため、3 語ともそろえます。
+
+`king - man + woman` を計算し、全トークン（50257 個）のベクトルとの内積を求めます。内積は、ベクトルの向きが近いほど大きくなります。`wte` の各行が 1 トークンのベクトルなので、`wte @ analogy` で全トークン分を一括で計算できます。内積の値を Softmax で確率に変換して、上位 10 件を表示します。
+
+```python
+words = [" king", " man", " woman"]
+word_ids = [tokenizer.encode(w)[0] for w in words]
+print("word_ids:", list(zip(words, word_ids)))
+
+king, man, woman = wte[word_ids]
+analogy = king - man + woman
+
+# 全トークンのベクトルとの内積を Softmax で確率にして、上位 10 件を表示
+analogy_probs = softmax(wte @ analogy)
+for i, t in enumerate(np.argsort(analogy_probs)[::-1][:10], start=1):
+    print(f"{i:2d}. {analogy_probs[t]:.4f}", repr(tokenizer.decode([int(t)])))
+```
+
+```text:実行結果
+word_ids: [(' king', 5822), (' man', 582), (' woman', 2415)]
+ 1. 0.0167 ' queen'
+ 2. 0.0148 ' king'
+ 3. 0.0037 'Queen'
+ 4. 0.0026 ' princess'
+ 5. 0.0019 ' queens'
+ 6. 0.0018 ' kings'
+ 7. 0.0014 ' Duchess'
+ 8. 0.0013 ' Queen'
+ 9. 0.0010 ' monarch'
+10. 0.0010 ' Empress'
+```
+
+` queen` が 1 位で、確率は約 0.017 です。2 位は ` king` 自身（約 0.015）で、差はわずかです。3 位以下にも `Queen`、` princess`、` queens` など、王族に関わるトークンが並びます。`king` から `man` を引いても元の `king` の成分は大きく残るので、` king` が上位に来るのは自然な結果です。
+
+確率が低く見えるのは、50257 個のトークンに確率が分散するためです。それでも、王族や女性に関わるトークンが上位にそろうことから、`wte` のベクトルには性別や王族といった意味の方向が含まれていて、足し引きで取り出せる傾向があると分かります。ただし、GPT-2 の `wte` は単語の類推のために学習されたものではないので、常に `queen` が 1 位になるわけではなく、あくまで傾向として読んでください。
+
+ここで行った、ベクトルを加工して、全トークンのベクトルとの内積を Softmax で確率にして選ぶ、という手順は、次のトークンの予測と同じ考え方です。Transformer Block は入力のベクトルを加工し、最後の LM Head（Step 4）で、同じように全トークンのベクトル（`wte`）との内積を取ります。
+
+## WPE（位置埋め込み）
 
 位置ベクトルのノルム、隣り合う位置との角度、位置 256・512 との内積を並べて描きます。因果マスクは Attention の参照方向を制限しますが、ここでは位置ベクトル同士の静的な幾何を見るため、基準の左右をそのまま描いています。
 
@@ -581,10 +624,6 @@ with np.printoptions(suppress=True):  # 指数表記にしない
 
 平均と分散の 2 つの数値だけでは、値の分布がどう変わるのかが分かりません。そこで、最初のトークンの 768 個の値を、入力・正規化後・γ/β 適用後の 3 段階でヒストグラムにして並べます。横軸は値、縦軸はその値の個数で、縦軸を揃えて比べます。横軸は揃えず、それぞれの範囲に合わせます。正規化でスケールが揃う様子と、γ/β で分布の形が調整される様子を分けて見るためです。グラフのタイトルでは、γ/β をコードの変数名に合わせて `g/b` と表記します。
 
-:::message
-グラフを描画するコードは省略しています。完全なコードは [abridged.ipynb](https://github.com/7shi/my-gpt2/blob/main/abridged.ipynb) を参照してください。
-:::
-
 ![LayerNorm の入力・正規化後・γ/β 適用後で最初のトークンの 768 個の値の分布を比べたヒストグラム](/images/20260330-gpt2-inference/ln-histogram.png)
 
 左から、LayerNorm の入力、正規化後、γ/β 適用後の、最初のトークンの 768 個の値の分布です。
@@ -660,8 +699,7 @@ toy_w_v = np.array([[0, 0, 0, 0],
                     [0, 0, 1, 0],   # 金融 → 金融
                     [0, 0, 0, 1]], dtype=np.float32)  # 地形 → 地形
 
-fig, axes = plt.subplots(1, 4, figsize=(14, 3))
-for ax, adjective, color in zip(axes[:2], ["commercial", "grassy"], ["C0", "C1"]):
+for adjective in ["commercial", "grassy"]:
     toy_tokens = ["a", adjective, "bank"]
     toy_x = np.array([toy_embeddings[t] for t in toy_tokens], dtype=np.float32)
 
@@ -681,34 +719,6 @@ for ax, adjective, color in zip(axes[:2], ["commercial", "grassy"], ["C0", "C1"]
           f"scores = {toy_scores}, weights = {toy_weights.round(3)}")
     print(f"  bank: {toy_x[-1]} + {toy_result.round(3)} "
           f"= {toy_bank_out.round(3)}")
-
-    # 左の 2 枚: bank から各トークンへの注目度
-    ax.bar(toy_tokens, toy_weights, color=color)
-    ax.set_title(f"a {adjective} bank")
-    ax.set_ylim(0, 1)
-    for j, weight in enumerate(toy_weights):
-        ax.text(j, weight + 0.02, f"{weight:.3f}", ha="center")
-
-    # 右の 2 枚: 受け取った情報と、加算後の bank のベクトル
-    offset = -0.18 if adjective == "commercial" else 0.18
-    axes[2].bar(np.arange(4) + offset, toy_result, width=0.36,
-                color=color, label=adjective)
-    axes[3].bar(np.arange(4) + offset, toy_bank_out, width=0.36,
-                color=color, label=adjective)
-
-axes[0].set_ylabel("attention from bank")
-axes[2].set_xticks(range(4), ["noun", "adjective", "finance", "terrain"], rotation=20)
-axes[2].set_ylim(0, 1.15)
-axes[2].set_ylabel("received value")
-axes[2].set_title("information received by bank")
-axes[2].legend()
-axes[3].set_xticks(range(4), ["noun", "adjective", "finance", "terrain"], rotation=20)
-axes[3].set_ylim(0, 1.15)
-axes[3].set_ylabel("vector component")
-axes[3].set_title("bank after residual addition")
-axes[3].legend()
-plt.tight_layout()
-plt.show()
 ```
 
 ```text:実行結果
