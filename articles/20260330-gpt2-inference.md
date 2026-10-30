@@ -883,8 +883,8 @@ def softmax(x):
     return exp_x / np.sum(exp_x, axis=-1, keepdims=True)
 
 mask = np.tril(np.ones((seq_len, seq_len)))
-scores = np.where(mask == 0, -1e10, scores)
-probs = softmax(scores)  # 注目度行列
+masked_scores = np.where(mask == 0, -1e10, scores)
+attn_weights = softmax(masked_scores)  # 注目度行列
 ```
 
 ![ヘッド 0 の注目度のヒートマップ](/images/20260330-gpt2-inference/causal-heatmap.png)
@@ -904,13 +904,13 @@ probs = softmax(scores)  # 注目度行列
 
 ### Value の重み付き平均
 
-`probs` は、Q と K の内積（スコア）にマスクと Softmax を適用して得た注目度です。つまり、Q と K による検索の結果にあたります。この `probs` を重みとして V の加重平均を取り、文脈を反映したベクトルを得ます。注目度の高いトークンほど、その V が多く流れ込みます。
+`attn_weights` は、Q と K の内積（スコア）にマスクと Softmax を適用して得た注目度です。つまり、Q と K による検索の結果にあたります。この `attn_weights` を重みとして V の加重平均を取り、文脈を反映したベクトルを得ます。注目度の高いトークンほど、その V が多く流れ込みます。
 
 ```python
-out = probs @ v
+weighted_v = attn_weights @ v
 
 # 確認
-print(out.shape)
+print(weighted_v.shape)
 ```
 
 ```text:実行結果
@@ -922,16 +922,16 @@ print(out.shape)
 最後に 12 ヘッドの結果を結合して 768 次元に戻し、出力射影を適用します。
 
 ```python
-merged = out.transpose(1, 0, 2).reshape(seq_len, embed_dim)  # 12 ヘッドを結合
-proj = merged @ attn.w_out + attn.b_out                      # 出力射影
+merged = weighted_v.transpose(1, 0, 2).reshape(seq_len, embed_dim)  # 12 ヘッドを結合
+attn_out = merged @ attn.w_out + attn.b_out                         # 出力射影
 
 # 最後のトークン（is）が、各ヘッドでどのトークンに最も注目しているか
 words = [tokenizer.decode([i]).strip() for i in input_ids]
 for h in range(12):
-    w = probs[h, -1]
+    w = attn_weights[h, -1]
     print(f"ヘッド {h:2d}: {words[w.argmax()]:8s} {w.max():.2f}")
 
-print(proj.shape)  # 12 ヘッドを結合して射影: (seq_len, 768)
+print(attn_out.shape)  # 12 ヘッドを結合して射影: (seq_len, 768)
 ```
 
 ```text:実行結果
@@ -968,29 +968,29 @@ Attention の出力は、そのまま次の処理に渡すのではなく、入�
 
 GPT-2 は処理の**前**に LayerNorm を置く **Pre-LayerNorm** を採用しています。残差接続のパスがモデル全体を貫通するため、信号が深層まで伝わりやすくなります。
 
-ブロック 0 で、Attention の出力 `proj` を、Attention に入る前の入力 `embedded_x` に加算します。LayerNorm を通したのは Attention に渡した値だけで、加算する側は LayerNorm を通す前の `embedded_x` です。
+ブロック 0 で、Attention の出力 `attn_out` を、Attention に入る前の入力 `embedded_x` に加算します。LayerNorm を通したのは Attention に渡した値だけで、加算する側は LayerNorm を通す前の `embedded_x` です。
 
 ```python
 # Attention の出力を、入力（埋め込み）に加算する（残差接続）
-connected_x = embedded_x + proj
+connected_x = embedded_x + attn_out
 
 # 確認
-print("embedded_x:", embedded_x.shape, "+ proj:", proj.shape, "->", connected_x.shape)
+print("embedded_x:", embedded_x.shape, "+ attn_out:", attn_out.shape, "->", connected_x.shape)
 print("norm(embedded_x):  ", np.linalg.norm(embedded_x, axis=-1))
-print("norm(proj):        ", np.linalg.norm(proj, axis=-1))
+print("norm(attn_out):    ", np.linalg.norm(attn_out, axis=-1))
 print("norm(connected_x): ", np.linalg.norm(connected_x, axis=-1))
 ```
 
 ```text:実行結果
-embedded_x: (5, 768) + proj: (5, 768) -> (5, 768)
+embedded_x: (5, 768) + attn_out: (5, 768) -> (5, 768)
 norm(embedded_x):   [10.132026   6.2453856  5.2828484  5.5339622  4.9377227]
-norm(proj):         [22.145576 31.166588 27.412516 34.03442  28.357483]
+norm(attn_out):     [22.145576 31.166588 27.412516 34.03442  28.357483]
 norm(connected_x):  [26.79642  32.713398 28.624733 34.710682 29.221094]
 ```
 
-出力の 1 行目は形で、`embedded_x` と `proj` はどちらも `(5, 768)` なので、そのまま加算できます。加算しても形は変わりません。
+出力の 1 行目は形で、`embedded_x` と `attn_out` はどちらも `(5, 768)` なので、そのまま加算できます。加算しても形は変わりません。
 
-2 行目以降は、各トークンのベクトルの大きさ（ノルム）です。ここではブロック 0 の一例ですが、`proj`（Attention の出力）の大きさは `embedded_x`（元の埋め込み）より大きく、Attention が幹線に加える変更は小さくないことが分かります。それでも、元の埋め込みは加算によって `connected_x` に残っています。
+2 行目以降は、各トークンのベクトルの大きさ（ノルム）です。ここではブロック 0 の一例ですが、`attn_out`（Attention の出力）の大きさは `embedded_x`（元の埋め込み）より大きく、Attention が幹線に加える変更は小さくないことが分かります。それでも、元の埋め込みは加算によって `connected_x` に残っています。
 
 ## MLP
 
@@ -1001,16 +1001,18 @@ norm(connected_x):  [26.79642  32.713398 28.624733 34.710682 29.221094]
 MLP への入力は、残差接続で Attention の出力を加算した `connected_x` に、2 つ目の LayerNorm（`ln_2`）を適用した値です。
 
 ```python
-# 以降の引用コードは MLP クラスの中身なので、self を用意して動かす
-self = blocks[0].mlp
-x = blocks[0].ln_2(connected_x)  # MLP への入力（残差接続の結果に LayerNorm を適用）
+# MLP への入力（残差接続の結果に LayerNorm を適用）
+z = blocks[0].ln_2(connected_x)
 
-i = x @ self.w_fc + self.b_fc         # 768 → 3072（4倍に拡張）
-a = gelu(i)                           # 非線形変換（活性化関数）
-out = a @ self.w_proj + self.b_proj   # 3072 → 768（元に圧縮）
+# 以降の引用コードは MLP クラスの中身なので、mlp を用意して動かす
+mlp = blocks[0].mlp
+
+i = z @ mlp.w_fc + mlp.b_fc            # 768 → 3072（4倍に拡張）
+a = gelu(i)                            # 非線形変換（活性化関数）
+mlp_out = a @ mlp.w_proj + mlp.b_proj  # 3072 → 768（元に圧縮）
 
 # 確認
-print(x.shape, "->", i.shape, "->", out.shape)  # 768 → 3072 → 768
+print(z.shape, "->", i.shape, "->", mlp_out.shape)  # 768 → 3072 → 768
 
 words = [tokenizer.decode([t]).strip() for t in input_ids]
 
@@ -1064,29 +1066,27 @@ print(samples, "->", gelu(samples))
 
 ### MLP の残差接続
 
-MLP の出力も、Attention と同じく残差接続で幹線に加算します。加算する相手は、LayerNorm を通した `x` ではなく、通す前の `connected_x`（Attention の残差接続の結果）です。これでブロック 0 の処理が完結します。
+MLP の出力も、Attention と同じく残差接続で幹線に加算します。加算する相手は、LayerNorm を通した `z` ではなく、通す前の `connected_x`（Attention の残差接続の結果）です。これでブロック 0 の処理が完結します。
 
 ```python
 # MLP の出力を、LayerNorm を通す前の connected_x に加算する（残差接続）
-block_out = connected_x + out
+block_out = connected_x + mlp_out
 
 # 確認
 print("norm(connected_x):", np.linalg.norm(connected_x, axis=-1))
-print("norm(out):        ", np.linalg.norm(out, axis=-1))
+print("norm(mlp_out):    ", np.linalg.norm(mlp_out, axis=-1))
 print("norm(block_out):  ", np.linalg.norm(block_out, axis=-1))
-print("ブロック 0 の出力と一致:", np.allclose(block_out, blocks[0](embedded_x), atol=1e-4))
 ```
 
 ```text:実行結果
 norm(connected_x): [26.79642  32.713398 28.624733 34.710682 29.221094]
-norm(out):         [124.380875  30.390959  30.005434  35.954567  32.879833]
+norm(mlp_out):     [124.380875  30.390959  30.005434  35.954567  32.879833]
 norm(block_out):   [132.81807   54.512966  53.544956  62.96802   56.50396 ]
-ブロック 0 の出力と一致: True
 ```
 
-出力の 1 行目から 3 行目は、`connected_x`、MLP の出力 `out`、加算後の `block_out` の、各トークンのベクトルの大きさ（ノルム）です。MLP の出力も `connected_x` と同程度か、それ以上の大きさがあり、特に最初のトークン `The` では `out` が大きくなっています。それでも、加算なので `connected_x` の内容は `block_out` に残っています。
+出力の 1 行目から 3 行目は、`connected_x`、MLP の出力 `mlp_out`、加算後の `block_out` の、各トークンのベクトルの大きさ（ノルム）です。MLP の出力も `connected_x` と同程度か、それ以上の大きさがあり、特に最初のトークン `The` では `mlp_out` が大きくなっています。それでも、加算なので `connected_x` の内容は `block_out` に残っています。
 
-最後の行は、この `block_out` が、`blocks[0](embedded_x)`（TransformerBlock をそのまま実行した結果）と一致していることの確認です。ここまでで、ブロック 0 の「LayerNorm → Attention → 残差接続 → LayerNorm → MLP → 残差接続」が、順に確認できました。この出力が、ブロック 1 の入力になります。
+ここまでで、ブロック 0 の「LayerNorm → Attention → 残差接続 → LayerNorm → MLP → 残差接続」が、順に確認できました。この出力が、ブロック 1 の入力になります。
 
 ## 文脈付き埋め込み
 
