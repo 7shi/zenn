@@ -1152,9 +1152,87 @@ norm(block_out):   [132.81807   54.512966  53.544956  62.96802   56.50396 ]
 
 12 ブロックを通過すると、同じ単語でも文脈によって異なるベクトルに変化します。これを**文脈付き埋め込み** (Contextual Embedding) と呼びます。Attention の人工例で扱った "a commercial bank" と "a grassy bank" でも、"bank" のトークン埋め込みは同一ですが、前にある形容詞の情報を取り込むことで、異なるベクトルへと変化します。人工例では金融・地形という 2 つの軸で表しましたが、実際のモデルでは多数の次元にわたる表現として文脈が取り込まれます。
 
-因果マスクにより、各トークンは自分自身と過去のトークンだけを参照できるため、最後のトークンにはそれより前のすべてのトークンの情報が集約されます。
+実際にこの 2 つのフレーズを GPT-2 に入力し、最後のトークン `" bank"` のベクトルが層を経るごとにどう変化するか、コサイン類似度（単位ベクトル同士の内積）で比較してみます。
 
-そのため、理論上は最後のトークンのベクトルを文全体の埋め込み（文埋め込み）として扱えます。ただし、GPT-2 のように「次のトークンを予測する」ことに特化して学習されたモデルのベクトルは、次の予測に必要な情報を表すように作られています。文の意味が近いほどベクトルも近くなるように学習された、埋め込みに特化したモデルとは、特性が異なります。
+```python
+def embed(text):
+    ids = tokenizer.encode(text)
+    return wte[ids] + wpe[np.arange(len(ids))]
+
+def unit(v):
+    return v / np.linalg.norm(v)
+
+x1, x2 = embed("a commercial bank"), embed("a grassy bank")
+print(f"Embedding: {unit(x1[-1]) @ unit(x2[-1]):.4f}")
+for i, b in enumerate(blocks):
+    x1, x2 = b(x1), b(x2)
+    print(f"Block {i:2d} : {unit(x1[-1]) @ unit(x2[-1]):.4f}")
+```
+
+```text:実行結果
+Embedding: 0.9866
+Block  0 : 0.9756
+Block  1 : 0.9683
+Block  2 : 0.9470
+Block  3 : 0.9219
+Block  4 : 0.9003
+Block  5 : 0.8973
+Block  6 : 0.8984
+Block  7 : 0.9067
+Block  8 : 0.8980
+Block  9 : 0.8863
+Block 10 : 0.9223
+Block 11 : 0.9389
+```
+
+`" grassy"` が `[' grass', 'y']` の 2 トークンに分割されるため、`" bank"` の位置が 1 つずれ、加算される位置埋め込み（`wpe[2]` と `wpe[3]`）の違いにより Embedding の時点では `0.9866` から始まります。ブロックを通過するにつれて `commercial` と `grassy` の文脈を取り込み、Block 9 では `0.8863` まで類似度が下がって、異なるベクトルへと分岐していることが分かります。
+
+因果マスクにより、各トークンは自分自身と過去のトークンだけを参照できるため、最後のトークンにはそれより前のすべてのトークンの情報が集約されます。そのため、理論上は最後のトークンのベクトルを文全体の埋め込み（**文埋め込み**）として扱えます。
+
+10 個の文の最後のトークンのベクトルを求め、クエリ文 `"The economy is in trouble."` とのコサイン類似度で検索してみます。
+
+```python
+sentences = [
+    "The cat sat on the mat.",
+    "A kitten was resting on the rug.",
+    "Dogs are loyal and friendly animals.",
+    "The stock market crashed yesterday.",
+    "Investors lost money in the financial crisis.",
+    "She enjoys reading books before bed.",
+    "He likes to read novels at night.",
+    "The weather is sunny and warm today.",
+    "It is raining heavily outside.",
+    "Python is a popular programming language.",
+]
+
+def encode_text(text):
+    x = embed(text)
+    for b in blocks:
+        x = b(x)
+    return unit(x[-1])
+
+sent_vecs = np.array([encode_text(s) for s in sentences])
+sims = sent_vecs @ encode_text("The economy is in trouble.")
+for rank, i in enumerate(np.argsort(sims)[::-1], 1):
+    print(f"{rank:2d}. {sims[i]:.4f}  {sentences[i]}")
+```
+
+```text:実行結果
+ 1. 0.9865  Investors lost money in the financial crisis.
+ 2. 0.9773  The stock market crashed yesterday.
+ 3. 0.9698  It is raining heavily outside.
+ 4. 0.9644  The weather is sunny and warm today.
+ 5. 0.9582  He likes to read novels at night.
+ 6. 0.9546  Dogs are loyal and friendly animals.
+ 7. 0.9527  A kitten was resting on the rug.
+ 8. 0.9507  She enjoys reading books before bed.
+ 9. 0.9498  Python is a popular programming language.
+10. 0.9380  The cat sat on the mat.
+```
+
+クエリの `"economy"` や `"trouble"` という単語自体はどの文にも含まれていませんが、金融危機や株価暴落に関する 2 つの文が 1 位・2 位に来ており、最後のトークンに文全体の意味が集約されていることが分かります。
+
+ただし、コサイン類似度の値を見ると、まったく無関係な最下位の文でも `0.9380` と高く、全体が `0.94〜0.99` の非常に狭い範囲に密集しています。GPT-2 のように「次のトークンを予測する」ことに特化して学習されたモデルのベクトルは、次の予測に必要な情報（たとえば「文末のピリオドの次には新しい文が来る」といった共通の特徴）を強く表すように作られています。文の意味が近いほどベクトルを近づけ、異なるほど遠ざけるように学習（対照学習）された、埋め込みに特化したモデルとは特性が異なります。
 
 # 出力とサンプリング
 
