@@ -126,7 +126,7 @@ from my_gpt2.model import softmax, gelu
 model_id = "openai-community/gpt2"
 tokenizer = Tokenizer(model_id)
 model = load_gpt2_weights(model_id)
-wte, wpe, ln_f, blocks = model.wte, model.wpe, model.ln_f, model.blocks
+wte, wpe, blocks, ln_f = model.wte, model.wpe, model.blocks, model.ln_f
 ```
 
 **Step 0: トークナイザー** — テキストをトークン ID の列に変換します。
@@ -232,33 +232,27 @@ norm(normed_x): [ 78.14827 183.76552 182.14905 202.76149 255.3541 ]
 
 **Step 4: LM Head** — 全語彙の埋め込みベクトルとの内積（ロジット）を一括計算します。
 
-初めて出てくる `@` は**行列積**です。ここでは、`normed_x`（形は `(トークン数, 768)`）の各行と、`wte`（形は `(50257, 768)`）の各行、つまり語彙ごとの埋め込みベクトルとの内積を、すべての組み合わせについて一括で計算しています。`wte` はそのままでは掛けられないので、転置した `wte.T`（形は `(768, 50257)`）を使います。結果の `logits` は `(トークン数, 50257)` の行列で、`logits[i, j]` は、i 番目のトークンの出力ベクトルと、j 番目の語彙の埋め込みベクトルの内積です。
+次のトークンの予測に使うのは最後のトークンだけなので、`normed_x[-1]`（形は `(768,)`）だけを計算対象にします。
+
+初めて出てくる `@` は**行列積**です。ここでは、`wte`（形は `(50257, 768)`）の各行、つまり語彙ごとの埋め込みベクトルと、`normed_x[-1]`（形は `(768,)`）との内積を、すべての語彙について一括で計算しています。WTE の節の `wte @ analogy` と同じ形です。結果の `logits` は `(50257,)` のベクトルで、`logits[j]` は、最後のトークンの出力ベクトルと、j 番目の語彙の埋め込みベクトルの内積です。
 
 行列積の仕組みは、Attention の「Q, K, V への変換」で改めて説明します。ここでは、複数の内積をまとめて計算していると読んでください。
 
 ```python
-logits = normed_x @ wte.T
+logits = wte @ normed_x[-1]
 
 print("logits:", logits)
 ```
 
 ```text:実行結果
-logits: [[ -36.287464  -35.01145   -38.0794   ...  -40.5164    -41.376015
-   -34.919384]
- [ -75.10218   -75.64832   -82.68278  ...  -82.59613   -79.39135
-   -76.26869 ]
- [ -80.096794  -78.6868    -81.23405  ...  -83.75481   -85.65412
-   -79.804245]
- [ -86.00845   -86.46174   -91.018425 ...  -98.69116   -93.37344
-   -87.92861 ]
- [-108.954216 -108.93266  -112.57931  ... -118.334496 -113.15045
-  -110.37789 ]]
+logits: [-108.954254 -108.93265  -112.57933  ... -118.3345   -113.150475
+ -110.37794 ]
 ```
 
 **Step 5: サンプリング** — 最後のトークンのロジットから次のトークンを確率的に選択します。
 
 ```python
-probs = softmax(logits[-1])
+probs = softmax(logits)
 next_id = np.random.choice(len(probs), p=probs)  # 乱数によって選択
 next_token = tokenizer.decode([int(next_id)])
 
@@ -304,7 +298,7 @@ for i, t in enumerate(np.argsort(probs)[::-1][:20], start=1):
 20. 0.0047 ' to'
 ```
 
-以上が、GPT-2 の推論の全体です。入力テキスト `The capital of France is` を、トークン ID に変換し（Step 0）、ベクトルにして位置情報を加え（Step 1）、12 個の Transformer Block で文脈を取り込み（Step 2）、最終 LayerNorm で整え（Step 3）、全語彙とのロジットを計算し（Step 4）、最後のトークンのロジットから次のトークンを 1 つ選びます（Step 5）。
+以上が、GPT-2 の推論の全体です。入力テキスト `The capital of France is` を、トークン ID に変換し（Step 0）、ベクトルにして位置情報を加え（Step 1）、12 個の Transformer Block で文脈を取り込み（Step 2）、最終 LayerNorm で整え（Step 3）、最後のトークンと全語彙とのロジットを計算し（Step 4）、最後のトークンのロジットから次のトークンを 1 つ選びます（Step 5）。
 
 Step 5 はサンプリングなので、同じ入力でも実行のたびに結果が変わります。確率の高いトークンほど選ばれやすいものの、上位の候補でも確率はそれほど高くなく、毎回同じにはなりません。ここで得られるのは次の 1 トークンだけで、文章を生成するには、選んだトークンを入力に追加して、この処理を繰り返します（自己回帰生成、後述）。
 
@@ -864,7 +858,7 @@ $$
 
 左の行列が `y`（ここでは 2 トークン分）、右の行列が `w_qkv`（ここでは 2 列）、結果の行列が `qkv` に相当します。トークンが増えれば左の行が増え、列が増えれば右の列が増えて、結果もそれぞれ行と列が増えます。
 
-つまり、ここでは「複数の内積を一括で計算する」ために、行列積を使っています。先ほどの Step 4 の `normed_x @ wte.T` も、以降の `@` も、ベクトルを並べた行列どうしの積として読みます。
+つまり、ここでは「複数の内積を一括で計算する」ために、行列積を使っています。先ほどの Step 4 の `wte @ normed_x[-1]` も、以降の `@` も、ベクトルを並べた行列を使った積として読みます。
 
 ```python
 # (seq_len, 2304) → (seq_len, 768) × 3 分割
@@ -919,7 +913,7 @@ print(scores.shape)
 
 人工例では、「入力も 1 つずつ順番に生成された」という前提から、`bank` は前の `commercial` や `grassy` を見られても、その逆はできないという一方通行を導きました。ここでは、この前提を行列計算の中でどう実現するかを、全トークンの組み合わせで確認します。
 
-GPT-2 では、各トークンが Q と K で検索できる対象は、自分自身と、自分より前に生成されたトークンだけです。つまり**後方参照**しかできません。`The capital of France is` の 5 トークンなら、各トークンが参照できる範囲は次のようになります（行が注目する側、列が注目される側）。
+GPT-2 では、各トークンが Q と K で検索できる対象は、自分自身と、自分より過去に生成されたトークンだけです。つまり**後方参照**しかできません。`The capital of France is` の 5 トークンなら、各トークンが参照できる範囲は次のようになります（行が注目する側、列が注目される側）。
 
 | 注目する側＼注目される側 | The | capital | of | France | is |
 |---|---|---|---|---|---|
@@ -933,7 +927,13 @@ GPT-2 では、各トークンが Q と K で検索できる対象は、自分�
 
 表の空白（右上の三角形）は、自分より後に生成されるトークンです。ところが、全トークンのスコアを行列でまとめて計算すると、未来のトークンとのスコアも求まってしまいます。そこで、スコアの上三角部分を $-10^{10}$ で上書きして、存在しないものとして隠します。これを**因果マスク**と呼びます。この扱いにより、入力をまとめて処理しても、1 つずつ生成しながら処理しても、各トークンが見る情報は同じになります。
 
-隠したスコアを含めて、人工例でも使った **Softmax** を適用し、注目度に変換します。マスクされた位置は $-10^{10}$ なので、$\exp(-10^{10}) \approx 0$ となり、注目度は 0、つまり実質的に無視されます。
+隠したスコアを含めて、人工例でも使った **Softmax** を適用し、注目度に変換します。Softmax は、各スコアの指数 $\exp(x)$ を取り、合計で割ることで全体の和が 1 になるよう正規化する計算です。
+
+$$
+\text{Softmax}(x_i) = \frac{\exp(x_i)}{\sum_j \exp(x_j)}
+$$
+
+最もスコアが高い要素に高い確率が割り当てられ、スコアの差が大きいほど確率の偏りも大きくなります。マスクされた位置は $-10^{10}$ なので、$\exp(-10^{10}) \approx 0$ となり、注目度は 0、つまり実質的に無視されます。
 
 ```python
 def softmax(x):
@@ -1148,6 +1148,15 @@ norm(block_out):   [132.81807   54.512966  53.544956  62.96802   56.50396 ]
 
 ここまでで、ブロック 0 の「LayerNorm → Attention → 残差接続 → LayerNorm → MLP → 残差接続」が、順に確認できました。この出力が、ブロック 1 の入力になります。
 
+ブロックの一連の処理は `block(x)` と書いて 1 つにまとめて呼び出せます。12 個のブロックを順に通すには、前のブロックの出力を次のブロックの入力にして繰り返します。
+
+```python
+x = embedded_x
+for block in blocks:
+    x = block(x)
+transformed_x = x
+```
+
 ## 文脈付き埋め込み
 
 12 ブロックを通過すると、同じ単語でも文脈によって異なるベクトルに変化します。これを**文脈付き埋め込み** (Contextual Embedding) と呼びます。Attention の人工例で扱った "a commercial bank" と "a grassy bank" でも、"bank" のトークン埋め込みは同一ですが、前にある形容詞の情報を取り込むことで、異なるベクトルへと変化します。人工例では金融・地形という 2 つの軸で表しましたが、実際のモデルでは多数の次元にわたる表現として文脈が取り込まれます。
@@ -1164,8 +1173,8 @@ def unit(v):
 
 x1, x2 = embed("a commercial bank"), embed("a grassy bank")
 print(f"Embedding: {unit(x1[-1]) @ unit(x2[-1]):.4f}")
-for i, b in enumerate(blocks):
-    x1, x2 = b(x1), b(x2)
+for i, block in enumerate(blocks):
+    x1, x2 = block(x1), block(x2)
     print(f"Block {i:2d} : {unit(x1[-1]) @ unit(x2[-1]):.4f}")
 ```
 
@@ -1236,47 +1245,64 @@ for rank, i in enumerate(np.argsort(sims)[::-1], 1):
 
 # 出力とサンプリング
 
-12 層の Transformer Block と最終 LayerNorm を通過したベクトルから、次の単語の確率分布を生成します。
+12 層の Transformer Block を通過したベクトルに最終 LayerNorm `ln_f` を適用します。
+
+```python
+normed_x = ln_f(transformed_x)
+```
+
+最終 LayerNorm `ln_f` は、各ブロックの `ln_1`、`ln_2` と同じ計算です。トークンごとにベクトルを正規化してから、γ、β でスケールとシフトを調整します。ブロックの LayerNorm とは別に、最終 LayerNorm 専用の重みを持ちます。
+
+この出力 `normed_x` から、次の単語の確率分布を生成します。
 
 ## LM Head（Weight Tying）
 
-通常、出力層には独立した重み行列を用意しますが、GPT-2 では入力の Embedding 行列（WTE）をそのまま出力層にも再利用します。この手法を **Weight Tying** と呼びます。「単語 A を表すベクトル」と「次の単語として A を予測するベクトル」は同じ意味空間にあるべきという考えに基づいており、GPT-2 の 124M パラメーターのうち約 30% を占める行列を共有することでメモリも節約できます。
+LM Head とは、Transformer の出力ベクトルを、語彙の各トークンに対するスコアに変換する出力層です。通常、出力層には独立した重み行列を用意しますが、GPT-2 では入力の Embedding 行列（WTE）をそのまま再利用します。この手法を **Weight Tying** と呼びます。GPT-2 の 124M パラメーターのうち約 30% を占める行列を共有することで、メモリも節約できます。
+
+最後のトークンのベクトルは、12 層のブロックを通ることで、それ以前のすべてのトークンの情報が集約されます。このベクトルが語彙中のどのトークンに近いかを調べることで、次の単語を予測します。
+
+WTE の節で見たように、語彙中のどのトークンのベクトルに近いかは、全トークンとの内積で求めます。具体的には、`wte @ normed_x[-1]` のように、最後のトークンのベクトルだけを `wte` と掛け合わせます。
+
+この全トークンとの内積を**ロジット**と呼びます。内積はベクトルが同じ方向を向いているほど大きくなるため、モデルの最終出力に近い埋め込みを持つトークンほどロジットは大きくなります。
 
 ```python
-logits = normed_x @ wte.T  # (seq_len, 768) @ (768, 50257) → (seq_len, 50257)
+logits = wte @ normed_x[-1]  # (50257, 768) @ (768,) → (50257,)
 
-# 最後のトークンの上位 5 候補
-for t in np.argsort(logits[-1])[::-1][:5]:
-    print(repr(tokenizer.decode([int(t)])), logits[-1, t])
+# 最後のトークンの上位 10 候補
+for i, t in enumerate(np.argsort(logits)[::-1][:10], start=1):
+    print(f"{i:2d}. {logits[t]:.4f}", repr(tokenizer.decode([int(t)])))
 ```
 
 ```text:実行結果
-' the' -100.2498
-' now' -100.81753
-' a' -100.8555
-' France' -101.21015
-' Paris' -101.2143
+ 1. -100.2498 ' the'
+ 2. -100.8175 ' now'
+ 3. -100.8555 ' a'
+ 4. -101.2102 ' France'
+ 5. -101.2143 ' Paris'
+ 6. -101.4052 ' in'
+ 7. -101.4141 ' also'
+ 8. -101.5168 ' not'
+ 9. -101.5371 ' home'
+10. -101.9463 ' still'
 ```
-
-行列積によって各トークンのベクトルと全語彙の埋め込みベクトルとの内積を一括計算しています。内積はベクトルが同じ方向を向いているほど大きくなるため、モデルの最終出力に近い埋め込みを持つトークンほど高いスコアになります。この出力は確率分布の前段階となるスコアで、**ロジット**と呼ばれます。
 
 ## サンプリング手法
 
-因果マスクにより最後のトークンにはそれ以前のすべてのトークンの情報が集約されているため、次の単語の予測には最終トークンのロジットだけを使用します。
+前節のとおり、次の単語の予測には最終トークンのロジットだけを使用します。
 
 最終トークンのロジットを Softmax で確率分布に変換した後、次のトークンを選びます。確率分布からどのようにトークンを選ぶかによって、生成されるテキストの性質が変わります。
 
 - **貪欲法**: 最も確率が高いトークンを選択。決定論的だがループが発生しやすい
-- **Temperature**: ロジットを温度 T で割ってから Softmax を適用し、分布の尖り具合を調整。低温（T < 1）で保守的、高温（T > 1）で多様な生成になる
+- **Temperature**: ロジットを温度 T で割ってから Softmax を適用し、分布の尖り具合を調整。低温（T < 1）で保守的、高温（T > 1）で多様な生成になる。T = 0 は 0 で割ることになるため計算できないが、貪欲法として扱うのが一般的
 - **Top-k**: 上位 k 個のトークン以外をマスクし、候補数を固定
 - **Top-p（Nucleus）**: 累積確率が p に達するまでのトークンを候補にする。語彙の分布に応じて候補数が動的に変わるため、Top-k より適応的
 
 Temperature による分布の違いを、最後のトークンのロジットで確認します。確率の上位 10 トークンについて、温度 T を変えたときの確率を比べます。
 
 ```python
-top = np.argsort(logits[-1])[::-1][:10]
+top = np.argsort(logits)[::-1][:10]
 for T in [0.5, 1, 2]:
-    p = softmax(logits[-1] / T)
+    p = softmax(logits / T)
     print(f"T = {T}: 上位 10 件の確率の合計 {p[top].sum():.2f}")
 ```
 
@@ -1290,73 +1316,50 @@ T = 2: 上位 10 件の確率の合計 0.03
 
 T = 1 が元の分布です。T を 0.5 に下げると、最も確率が高い `' the'` が約 0.40 まで集中し、分布が尖ります。上位 10 件の確率の合計も、0.36 から 0.91 に増えます。逆に T を 2 に上げると、上位のトークンでも確率が 0.005 以下まで下がり、上位 10 件の合計は 0.03 です。確率が語彙全体に広がっていることを表します（縦軸は対数です）。温度が低いほど決定的に、高いほど多様な生成になります。
 
-## 自己回帰生成
+## 自己回帰生成とまとめ
 
 GPT-2 は一度に 1 トークンずつ予測します。予測したトークンを入力に追加して再び推論するループを繰り返すことで文章を生成します。
 
+ここまでの内容を、最初に掲載したコアコードから途中経過の出力を除いて、`generate` 関数にまとめます。自己回帰生成のループの中に Step 1〜5 を入れた形で、これだけで文章を生成できます。
+
 ```python
-input_ids = tokenizer.encode(text)
-n_tokens_to_generate = 8
+def generate(text, n_tokens_to_generate):
+    # Step 0: トークナイザー — テキストをトークンIDの列に変換
+    input_ids = tokenizer.encode(text)
+    print(text, end="")
 
-print(text, end="")
-for _ in range(n_tokens_to_generate):
-    logits = model(np.array(input_ids))
-    probs = softmax(logits[-1])
-    next_id = np.random.choice(len(probs), p=probs)  # 乱数によって選択
-    input_ids.append(next_id)
+    for _ in range(n_tokens_to_generate):
+        # Step 1: Embedding — トークンIDをベクトルに変換し、位置情報を加算
+        x = wte[input_ids] + wpe[np.arange(len(input_ids))]
 
-    # 生成したトークンを表示
-    print(tokenizer.decode([next_id]), end="", flush=True)
+        # Step 2: Transformer Block × 12 — 文脈理解と特徴変換を繰り返す
+        for block in blocks:
+            y = block.ln_1(x)  # 正規化
+            y = block.attn(y)  # 文脈理解
+            x = x + y          # 残差接続（加算）
+            z = block.ln_2(x)  # 正規化
+            z = block.mlp(z)   # 特徴変換
+            x = x + z          # 残差接続（加算）
+
+        # Step 3: 最終 LayerNorm — 出力前の正規化
+        x = ln_f(x)
+
+        # Step 4: LM Head — 最後のトークンについて、全語彙の埋め込みベクトルとの内積（ロジット）を一括計算
+        logits = wte @ x[-1]
+
+        # Step 5: サンプリング — 最後のトークンのロジットから次のトークンを確率的に選択
+        probs = softmax(logits)
+        next_id = np.random.choice(len(probs), p=probs)  # 乱数によって選択
+
+        # 選んだトークンを入力に追加して繰り返す（自己回帰生成）
+        input_ids.append(int(next_id))
+        print(tokenizer.decode([int(next_id)]), end="", flush=True)  # 生成したトークンから順に表示
+
+generate("The capital of France is", 8)
 ```
 
 ```text:実行結果
-The capital of France is Beingchurati Hills. But they
-```
-
-毎回入力全体をモデルに通し、最後のトークンの確率分布から次のトークンを選びます。なお、この素朴な実装では毎回全トークンを再計算しています。後のセクションで説明する KV キャッシュを使えば、新しいトークンの計算だけで済むようになります。
-
-# まとめ
-
-ここまでの内容を、最初に掲載したコアコードから途中経過の出力を除いて、1 つにまとめます。自己回帰生成のループの中に Step 1〜5 を入れた形で、これだけで文章を生成できます。
-
-```python
-text = "The capital of France is"
-n_tokens_to_generate = 8
-
-# Step 0: トークナイザー — テキストをトークンIDの列に変換
-input_ids = tokenizer.encode(text)
-print(text, end="")
-
-for _ in range(n_tokens_to_generate):
-    # Step 1: Embedding — トークンIDをベクトルに変換し、位置情報を加算
-    x = wte[input_ids] + wpe[np.arange(len(input_ids))]
-
-    # Step 2: Transformer Block × 12 — 文脈理解と特徴変換を繰り返す
-    for block in blocks:
-        y = block.ln_1(x)  # 正規化
-        y = block.attn(y)  # 文脈理解
-        x = x + y          # 残差接続（加算）
-        z = block.ln_2(x)  # 正規化
-        z = block.mlp(z)   # 特徴変換
-        x = x + z          # 残差接続（加算）
-
-    # Step 3: 最終 LayerNorm — 出力前の正規化
-    x = ln_f(x)
-
-    # Step 4: LM Head — 全語彙の埋め込みベクトルとの内積（ロジット）を一括計算
-    logits = x @ wte.T
-
-    # Step 5: サンプリング — 最後のトークンのロジットから次のトークンを確率的に選択
-    probs = softmax(logits[-1])
-    next_id = np.random.choice(len(probs), p=probs)  # 乱数によって選択
-
-    # 選んだトークンを入力に追加して繰り返す（自己回帰生成）
-    input_ids.append(int(next_id))
-    print(tokenizer.decode([int(next_id)]), end="", flush=True)  # 生成したトークンから順に表示
-```
-
-```text:実行結果
-The capital of France is ridden by a school of 300, with
+The capital of France is Paris and this area will be the country
 ```
 
 各ステップの役割は、次のとおりです。
@@ -1366,7 +1369,9 @@ The capital of France is ridden by a school of 300, with
 - **Step 3〜4**: 最終 LayerNorm で整えたベクトルと全語彙の埋め込みベクトルとの内積（ロジット）を、行列積で一括計算する
 - **Step 5**: 最後のトークンのロジットを Softmax で確率にして、次のトークンを 1 つ選ぶ
 
-これを繰り返すだけで文章が生成されます。KV キャッシュは、このループの中で毎回やり直している計算を省く工夫です。
+毎回入力全体をモデルに通し、最後のトークンの確率分布から次のトークンを選びます。これを繰り返せば文章が生成されます。
+
+なお、この素朴な実装では毎回全トークンを再計算しています。次に説明する KV キャッシュを使えば、差分だけの計算で済むようになります。
 
 # KV キャッシュ
 
@@ -1393,6 +1398,8 @@ Attention の計算量は Q の長さ × K の長さに比例します。プロ�
 
 ```python
 # 確認: KV キャッシュありでも、キャッシュなしと同じ結果になる（貪欲法で比較）
+n_tokens_to_generate = 8
+
 # キャッシュなし: 毎回すべてのトークンを処理する
 plain_ids = tokenizer.encode(text)
 for _ in range(n_tokens_to_generate):
