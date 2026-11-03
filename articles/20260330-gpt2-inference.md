@@ -16,6 +16,17 @@ https://zenn.dev/7shi/books/20260319-gpt2
 
 GPT-2 は OpenAI が 2019 年に発表した言語モデルです。「テキストを受け取り、次のトークンを予測する」というシンプルな目的で訓練されています。
 
+GPT-2 にはパラメーター数の異なる 4 つのサイズがあります。
+
+| モデル | パラメーター数 |
+|---|---|
+| [GPT-2 Small](https://huggingface.co/openai-community/gpt2) | 124M |
+| [GPT-2 Medium](https://huggingface.co/openai-community/gpt2-medium) | 355M |
+| [GPT-2 Large](https://huggingface.co/openai-community/gpt2-large) | 774M |
+| [GPT-2 XL](https://huggingface.co/openai-community/gpt2-xl) | 1.5B |
+
+この記事では最も小さい **GPT-2 Small（124M）** を対象とします。
+
 現代の LLM（GPT-4, Claude など）も Transformer アーキテクチャの基本はほぼ変わっておらず、GPT-2 との本質的な違いはパラメーター数と学習データの規模です。GPT-2 は現代の LLM の内部構造を理解するための最もコンパクトな出発点です。
 
 なお、この記事で扱うのは**推論のみ**です。学習については対象外です。
@@ -633,7 +644,7 @@ LayerNorm は、値をいったん平均 0・分散 1 に揃えたうえで、�
 
 各トークンが他のトークンとの関係性を計算し、文脈を取り込む処理です。Transformer の原論文のタイトルは "Attention Is All You Need" であり、Attention こそが Transformer の中核です。
 
-原論文では Encoder（双方向に参照）と Decoder（過去のみ参照）の 2 つが導入されましたが、GPT-2 は Decoder のみを使用します（Encoder は説明しません）。Decoder の Attention は **Self-Attention** と呼ばれ、同じシーケンス内のトークン同士の関係を計算します。
+原論文では Encoder（双方向に参照）と Decoder（過去のみ参照）の 2 つが導入されましたが、GPT-2 は Decoder のみを使用します（Encoder は説明しません）。GPT-2 の Attention は **Self-Attention** と呼ばれ、同じシーケンス内のトークン同士の関係を計算します（原論文の Decoder には、Encoder の出力を参照する **Cross-Attention** もあり、それと対比した呼び方です。Encoder 内部の Attention も Self-Attention です）。
 
 Attention の考え方を、`a commercial bank`（商業銀行）と `a grassy bank`（草に覆われた土手）という単純化した人工的な例（以下「人工例」）で見てみます。`bank` だけでは「銀行」なのか「土手」なのか決まりませんが、前にある形容詞 `commercial` や `grassy` の意味を取り込めば、文脈に応じた意味を表現できます。このように、**あるトークンが他のトークンの情報を取り込む**処理が Attention です。
 
